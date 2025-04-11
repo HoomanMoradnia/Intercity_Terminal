@@ -1,0 +1,102 @@
+{{define "content"}}
+<div class="auth-container">
+    <div class="auth-card" style="width: 600px; max-width: 90%;">
+        <h1 class="auth-card-title">Transportation Portal</h1>
+        
+        {{if .Success}}
+        <div class="alert alert-success">
+            {{.Success}}
+        </div>
+        {{end}}
+        
+        <!-- If no users are logged in or it's the first visit -->
+        {{if not .LoginLogs}}
+            <p style="text-align: center; margin-bottom: 1.5rem;">
+                Welcome to the transportation portal. Please sign in to access your account.
+            </p>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 1rem;">
+                <a href="/login" class="auth-button auth-button-primary" style="width: 48%;">Sign In</a>
+                <a href="/register" class="auth-button auth-button-secondary" style="width: 48%;">Register</a>
+            </div>
+        {{else}}
+            <!-- Dashboard content - visible after login -->
+            <div class="dashboard-section">
+                <h2 class="section-title">Users</h2>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Created At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .Users}}
+                            <tr>
+                                <td>{{.id}}</td>
+                                <td>{{.username}}</td>
+                                <td>{{.created_at}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+                <button id="showLogsBtn" class="auth-button auth-button-secondary" style="width: 48%;">Show Login Logs</button>
+                <a href="/register" class="auth-button auth-button-primary" style="width: 48%;">Register New User</a>
+            </div>
+            
+            <!-- Login logs section (hidden by default) -->
+            <div id="loginLogsSection" class="dashboard-section" style="display: none; margin-top: 1.5rem;">
+                <h2 class="section-title">Recent Login Activity</h2>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>IP Address</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .LoginLogs}}
+                            <tr>
+                                <td>{{.username}}</td>
+                                <td>{{.login_time}}</td>
+                                <td>
+                                    {{if .success}}
+                                    <span class="status-success">Success</span>
+                                    {{else}}
+                                    <span class="status-failed">Failed</span>
+                                    {{end}}
+                                </td>
+                                <td>{{.ip_address}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <script>
+                // Add event listener for the Show Login Logs button
+                document.getElementById('showLogsBtn').addEventListener('click', function() {
+                    var logsSection = document.getElementById('loginLogsSection');
+                    if (logsSection.style.display === 'none') {
+                        logsSection.style.display = 'block';
+                        this.textContent = 'Hide Login Logs';
+                    } else {
+                        logsSection.style.display = 'none';
+                        this.textContent = 'Show Login Logs';
+                    }
+                });
+            </script>
+        {{end}}
+    </div>
+</div>
+{{end}}

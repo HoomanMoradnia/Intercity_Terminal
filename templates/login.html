@@ -1,0 +1,53 @@
+{{define "content"}}
+<div class="auth-container">
+    <div class="auth-card">
+        <h1 class="auth-card-title">Sign in</h1>
+        
+        {{if .Error}}
+        <div class="alert alert-error">
+            {{.Error}}
+        </div>
+        {{end}}
+        
+        {{if .Success}}
+        <div class="alert alert-success">
+            {{.Success}}
+        </div>
+        {{end}}
+        
+        <form id="loginForm" action="/auth" method="POST">
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" id="username" name="username" class="form-input" placeholder="Username" autocomplete="username">
+            </div>
+            
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Password" autocomplete="current-password">
+                    <button type="button" id="togglePassword" class="password-toggle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button type="submit" class="auth-button auth-button-primary" style="width: 60%; margin: 0 auto; display: block;">Sign in</button>
+            </div>
+            
+            <div class="forgot-password">
+                <span>New user?</span>
+                <a href="/register" class="forgot-link">Register</a>
+            </div>
+            
+            <div class="forgot-password" style="margin-top: 0.5rem;">
+                <span>Forgot password?</span>
+                <a href="/forgot" class="forgot-link">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}

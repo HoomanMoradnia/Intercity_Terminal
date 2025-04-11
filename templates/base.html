@@ -1,0 +1,36 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/reset.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="bg-transport"></div>
+    
+    <div class="container">
+        <nav class="nav">
+            <div style="display: flex; align-items: center;">
+                {{if .IsLoggedIn}}
+                <a href="/dashboard?user={{.Username}}" class="nav-item {{if eq .ActivePage "dashboard"}}active{{end}}">Dashboard</a>
+                {{end}}
+            </div>
+            <div>
+                {{if .IsLoggedIn}}
+                <a href="/logout" class="nav-item" style="background-color: #e63946; color: white; padding: 0.25rem 0.75rem; border-radius: 4px;">Logout</a>
+                {{else}}
+                <a href="/login" class="nav-item {{if eq .ActivePage "login"}}active{{end}}" style="background-color: #1d3557; color: white; padding: 0.25rem 0.75rem; border-radius: 4px;">Sign in</a>
+                {{end}}
+            </div>
+        </nav>
+        
+        {{block "content" .}}{{end}}
+    </div>
+    
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
+{{end}}
