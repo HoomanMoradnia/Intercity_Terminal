@@ -284,13 +284,12 @@ function restoreDatabase() {
 
   try {
     fs.copyFileSync(TEMP_BACKUP_PATH, DB_PATH);
-    console.log(`Successfully restored database to ${DB_PATH}`);
+    console.log(\`Successfully restored database from \${TEMP_BACKUP_PATH} to \${DB_PATH}\`);
     
-    // Make a timestamp backup as well
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const timestampBackup = path.join(BACKUP_DIR, `backup-${timestamp}.db`);
-    fs.copyFileSync(TEMP_BACKUP_PATH, timestampBackup);
-    console.log(`Created timestamped backup at ${timestampBackup}`);
+    // Create a single permanent backup file
+    const permanentBackup = path.join(BACKUP_DIR, \`current-backup.db\`);
+    fs.copyFileSync(TEMP_BACKUP_PATH, permanentBackup);
+    console.log(\`Updated permanent backup at \${permanentBackup}\`);
     
     return true;
   } catch (error) {

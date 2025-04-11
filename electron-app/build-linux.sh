@@ -78,14 +78,14 @@ function restoreDatabase() {
 
   try {
     fs.copyFileSync(TEMP_BACKUP_PATH, DB_PATH);
-    console.log(`Successfully restored database to ${DB_PATH}`);
-
-    // Make a timestamp backup as well
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const timestampBackup = path.join(BACKUP_DIR, `backup-${timestamp}.db`);
-    fs.copyFileSync(TEMP_BACKUP_PATH, timestampBackup);
-    console.log(`Created timestamped backup at ${timestampBackup}`);
-
+    console.log(\`Successfully restored database from \${TEMP_BACKUP_PATH} to \${DB_PATH}\`);
+    
+    // Create a single permanent backup file
+    const permanentBackup = path.join(BACKUP_DIR, \`current-backup.db\`);
+    fs.copyFileSync(TEMP_BACKUP_PATH, permanentBackup);
+    console.log(\`Updated permanent backup at \${permanentBackup}\`);
+    
+    // Also try to restore to other potential locations if they exist
     return true;
   } catch (error) {
     console.error(`Error restoring database: ${error.message}`);
@@ -130,7 +130,8 @@ echo "=== Secure Sign In Database Setup ==="
 # Set paths
 APP_CONFIG_DIR="$HOME/.config/secure-sign-in-app"
 USER_HOME_DIR="$HOME/.securesignin"
-DB_PATH="$USER_HOME_DIR/securesignin.db"
+SHARED_DATA_DIR="$HOME/SecureSignIn/data"  # Shared data directory with Docker
+DB_PATH="$SHARED_DATA_DIR/securesignin.db"
 KEY_PATH="$USER_HOME_DIR/encryption.key"
 
 # Create all necessary directories
@@ -138,11 +139,19 @@ echo "Creating application directories..."
 mkdir -p "$APP_CONFIG_DIR"
 mkdir -p "$USER_HOME_DIR"
 mkdir -p "$APP_CONFIG_DIR/backups"
+mkdir -p "$SHARED_DATA_DIR"  # Create shared data directory
 
 # Set directory permissions
 chmod 755 "$APP_CONFIG_DIR"
 chmod 755 "$USER_HOME_DIR"
 chmod 755 "$APP_CONFIG_DIR/backups"
+chmod 755 "$SHARED_DATA_DIR"  # Shared data should be accessible
+
+# If there's an existing database in the user home directory but not in the shared directory, copy it
+if [ -f "$USER_HOME_DIR/securesignin.db" ] && [ ! -f "$DB_PATH" ]; then
+  echo "Found existing database in home directory, moving to shared location..."
+  cp "$USER_HOME_DIR/securesignin.db" "$DB_PATH"
+fi
 
 # Check for existing encryption key
 if [ ! -f "$KEY_PATH" ]; then
@@ -156,6 +165,7 @@ if [ ! -f "$KEY_PATH" ]; then
 fi
 
 echo "Database setup complete. Your database will be stored at: $DB_PATH"
+echo "This shared database location will be used by both Docker and Electron applications."
 EOF
   chmod +x ../scripts/linux-db-setup.sh
 fi

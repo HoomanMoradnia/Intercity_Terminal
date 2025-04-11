@@ -216,11 +216,10 @@ if not exist "scripts\preserve-data.js" (
   echo     fs.copyFileSync(TEMP_BACKUP_PATH, DB_PATH); >> scripts\preserve-data.js
   echo     console.log(`Successfully restored database to ${DB_PATH}`); >> scripts\preserve-data.js
   echo. >> scripts\preserve-data.js
-  echo     // Make a timestamp backup as well >> scripts\preserve-data.js
-  echo     const timestamp = new Date().toISOString().replace(/[:.]/g, '-'); >> scripts\preserve-data.js
-  echo     const timestampBackup = path.join(BACKUP_DIR, `backup-${timestamp}.db`); >> scripts\preserve-data.js
-  echo     fs.copyFileSync(TEMP_BACKUP_PATH, timestampBackup); >> scripts\preserve-data.js
-  echo     console.log(`Created timestamped backup at ${timestampBackup}`); >> scripts\preserve-data.js
+  echo     // Create a single permanent backup file >> scripts\preserve-data.js
+  echo     const permanentBackup = path.join(BACKUP_DIR, `current-backup.db`); >> scripts\preserve-data.js
+  echo     fs.copyFileSync(TEMP_BACKUP_PATH, permanentBackup); >> scripts\preserve-data.js
+  echo     console.log(`Updated permanent backup at ${permanentBackup}`); >> scripts\preserve-data.js
   echo. >> scripts\preserve-data.js
   echo     return true; >> scripts\preserve-data.js
   echo   } catch (error) { >> scripts\preserve-data.js
@@ -252,65 +251,76 @@ REM Backup user data before building
 echo Backing up user data before build...
 node scripts\preserve-data.js backup
 
-REM Create scripts directory in project root
+REM Create Windows DB setup script
 if not exist "..\scripts" mkdir ..\scripts
 
-REM Create Windows setup script in project root scripts
 if not exist "..\scripts\windows-db-setup.bat" (
   echo @echo off > ..\scripts\windows-db-setup.bat
-  echo setlocal enabledelayedexpansion >> ..\scripts\windows-db-setup.bat
   echo. >> ..\scripts\windows-db-setup.bat
   echo echo === Secure Sign In Database Setup === >> ..\scripts\windows-db-setup.bat
   echo. >> ..\scripts\windows-db-setup.bat
   echo REM Set paths >> ..\scripts\windows-db-setup.bat
   echo set "APP_CONFIG_DIR=%%USERPROFILE%%\.config\secure-sign-in-app" >> ..\scripts\windows-db-setup.bat
   echo set "USER_HOME_DIR=%%USERPROFILE%%\.securesignin" >> ..\scripts\windows-db-setup.bat
-  echo set "DB_PATH=%%USER_HOME_DIR%%\securesignin.db" >> ..\scripts\windows-db-setup.bat
+  echo set "SHARED_DATA_DIR=%%USERPROFILE%%\SecureSignIn\data" >> ..\scripts\windows-db-setup.bat
+  echo set "DB_PATH=%%SHARED_DATA_DIR%%\securesignin.db" >> ..\scripts\windows-db-setup.bat
   echo set "KEY_PATH=%%USER_HOME_DIR%%\encryption.key" >> ..\scripts\windows-db-setup.bat
   echo. >> ..\scripts\windows-db-setup.bat
-  echo REM Create all necessary directories >> ..\scripts\windows-db-setup.bat
   echo echo Creating application directories... >> ..\scripts\windows-db-setup.bat
   echo if not exist "%%APP_CONFIG_DIR%%" mkdir "%%APP_CONFIG_DIR%%" >> ..\scripts\windows-db-setup.bat
   echo if not exist "%%USER_HOME_DIR%%" mkdir "%%USER_HOME_DIR%%" >> ..\scripts\windows-db-setup.bat
   echo if not exist "%%APP_CONFIG_DIR%%\backups" mkdir "%%APP_CONFIG_DIR%%\backups" >> ..\scripts\windows-db-setup.bat
+  echo if not exist "%%SHARED_DATA_DIR%%" mkdir "%%SHARED_DATA_DIR%%" >> ..\scripts\windows-db-setup.bat
   echo. >> ..\scripts\windows-db-setup.bat
-  echo REM Check for existing encryption key >> ..\scripts\windows-db-setup.bat
+  echo REM If there's an existing database in the user home dir but not in the shared dir, copy it >> ..\scripts\windows-db-setup.bat
+  echo if exist "%%USER_HOME_DIR%%\securesignin.db" if not exist "%%DB_PATH%%" ( >> ..\scripts\windows-db-setup.bat
+  echo   echo Found existing database in home directory, moving to shared location... >> ..\scripts\windows-db-setup.bat
+  echo   copy "%%USER_HOME_DIR%%\securesignin.db" "%%DB_PATH%%" >> ..\scripts\windows-db-setup.bat
+  echo ) >> ..\scripts\windows-db-setup.bat
+  echo. >> ..\scripts\windows-db-setup.bat
+  echo REM Check for encryption key >> ..\scripts\windows-db-setup.bat
   echo if not exist "%%KEY_PATH%%" ( >> ..\scripts\windows-db-setup.bat
-  echo   echo No encryption key found, creating placeholder for app to use >> ..\scripts\windows-db-setup.bat
-  echo   certutil -f -encodehex NUL "%%KEY_PATH%%" 32 ^>nul 2^>^&1 >> ..\scripts\windows-db-setup.bat
+  echo   echo Creating encryption key placeholder... >> ..\scripts\windows-db-setup.bat
+  echo   REM Generate a random encryption key >> ..\scripts\windows-db-setup.bat
+  echo   powershell -Command "$bytes = New-Object Byte[] 32; (New-Object Random).NextBytes($bytes); [IO.File]::WriteAllBytes('%%KEY_PATH%%', $bytes)" >> ..\scripts\windows-db-setup.bat
   echo   if errorlevel 1 ( >> ..\scripts\windows-db-setup.bat
-  echo     echo Failed to create key file. Please run as administrator. >> ..\scripts\windows-db-setup.bat
+  echo     echo Failed to create encryption key. Please check permissions. >> ..\scripts\windows-db-setup.bat
   echo     exit /b 1 >> ..\scripts\windows-db-setup.bat
   echo   ) >> ..\scripts\windows-db-setup.bat
   echo ) >> ..\scripts\windows-db-setup.bat
   echo. >> ..\scripts\windows-db-setup.bat
   echo echo Database setup complete. Your database will be stored at: %%DB_PATH%% >> ..\scripts\windows-db-setup.bat
+  echo echo This shared database location will be used by both Docker and Electron applications. >> ..\scripts\windows-db-setup.bat
 )
 
-REM Create run script in project root scripts
+REM Create Windows run script
 if not exist "..\scripts\run-app.bat" (
   echo @echo off > ..\scripts\run-app.bat
+  echo. >> ..\scripts\run-app.bat
   echo REM Run script for Secure Sign In application >> ..\scripts\run-app.bat
   echo. >> ..\scripts\run-app.bat
   echo REM Set correct database path >> ..\scripts\run-app.bat
-  echo set "SQLITE_DB_PATH=%%USERPROFILE%%\.securesignin\securesignin.db" >> ..\scripts\run-app.bat
+  echo set "SQLITE_DB_PATH=%%USERPROFILE%%\SecureSignIn\data\securesignin.db" >> ..\scripts\run-app.bat
   echo. >> ..\scripts\run-app.bat
   echo REM Run database setup script if it exists >> ..\scripts\run-app.bat
-  echo if exist ".\scripts\windows-db-setup.bat" ( >> ..\scripts\run-app.bat
-  echo   call ".\scripts\windows-db-setup.bat" >> ..\scripts\run-app.bat
+  echo if exist "scripts\windows-db-setup.bat" ( >> ..\scripts\run-app.bat
+  echo   call scripts\windows-db-setup.bat >> ..\scripts\run-app.bat
   echo ) >> ..\scripts\run-app.bat
   echo. >> ..\scripts\run-app.bat
   echo REM Run the application >> ..\scripts\run-app.bat
-  echo set "APP_PATH=Secure Sign In.exe" >> ..\scripts\run-app.bat
-  echo if exist "%%APP_PATH%%" ( >> ..\scripts\run-app.bat
-  echo   echo Starting Secure Sign In application... >> ..\scripts\run-app.bat
-  echo   start "" "%%APP_PATH%%" >> ..\scripts\run-app.bat
+  echo echo Starting Secure Sign In application... >> ..\scripts\run-app.bat
+  echo if exist "Secure Sign In Setup 1.0.0.exe" ( >> ..\scripts\run-app.bat
+  echo   start "" "Secure Sign In Setup 1.0.0.exe" >> ..\scripts\run-app.bat
+  echo ) else if exist "Secure Sign In-1.0.0-win.exe" ( >> ..\scripts\run-app.bat
+  echo   start "" "Secure Sign In-1.0.0-win.exe" >> ..\scripts\run-app.bat
   echo ) else ( >> ..\scripts\run-app.bat
-  echo   echo Error: Application not found at %%APP_PATH%% >> ..\scripts\run-app.bat
+  echo   echo Error: Application not found. >> ..\scripts\run-app.bat
   echo   echo Please ensure you're running this script from the application directory. >> ..\scripts\run-app.bat
   echo   exit /b 1 >> ..\scripts\run-app.bat
   echo ) >> ..\scripts\run-app.bat
 )
+
+echo Windows scripts created successfully.
 
 REM Restore user data after building
 echo Restoring user data after build...

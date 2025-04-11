@@ -12,6 +12,11 @@ Before building or running the application, ensure you have the following instal
 
 For detailed installation instructions for these prerequisites, see [PREREQUISITES.md](PREREQUISITES.md).
 
+## Recent Changes
+
+- **UI Flow Improvements**: The application now loads the root URL (/) instead of directly loading the login page (/login). This ensures a consistent user experience between the web version and the desktop application.
+- **Shared Database Support**: The application now supports using the same database as the Docker container version, allowing for seamless data synchronization.
+
 ## Development
 
 ### Setup
@@ -79,6 +84,31 @@ The application includes a robust system to ensure your data is not lost during 
 
 - Primary database: `$HOME/.securesignin/securesignin.db` (Linux/macOS) or `%USERPROFILE%\.securesignin\securesignin.db` (Windows)
 - Backup directory: `$HOME/.config/secure-sign-in-app/backups/` (Linux/macOS) or `%USERPROFILE%\.config\secure-sign-in-app\backups\` (Windows)
+
+### Shared Database with Docker
+
+This application now supports using the same database as the Docker container version, allowing for seamless data synchronization between the desktop app and server versions.
+
+#### Shared Database Location
+
+- Linux/macOS: `~/.SecureSignIn/data/securesignin.db`
+- Windows: `%USERPROFILE%\.SecureSignIn\data\securesignin.db`
+
+#### Setting Up Shared Database
+
+1. Run the setup script from the project root:
+
+   ```bash
+   # Linux/macOS
+   ./setup-shared-db.sh
+
+   # Windows (run as administrator)
+   setup-shared-db.bat
+   ```
+
+2. This creates a shared database location and configures both the Electron app and Docker container to use it.
+
+For more detailed information, see [SHARED_DATABASE.md](../SHARED_DATABASE.md) in the project root.
 
 ### Manual Restore
 
