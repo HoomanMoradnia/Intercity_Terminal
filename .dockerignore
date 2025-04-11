@@ -1,0 +1,36 @@
+# Git files
+.git
+.gitignore
+
+# Editor and IDE files
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build artifacts
+*.exe
+*.test
+*.prof
+
+# Docker files (not needed in the build context)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Replit specific files
+.replit
+replit.nix
+
+# Asset files not needed for the build
+attached_assets
+*.png
+*.jpg
+
+# Go build cache
+.cache
+
+# Additional files to exclude
+README.md
+postgres_data/
+*.log
