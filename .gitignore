@@ -1,70 +1,24 @@
-# Go specific
+# Binary files
+securesignin
+
+# Generated files
+generated-icon.png
+
+# Home directory references
+~/
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
 *.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-main
-/vendor/
+*.AppImage
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# IDE specific
+# IDE files
 .idea/
 .vscode/
-*.swp
-*.swo
 
-# OS specific
+# OS files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-nohup.out
-
-# Electron specific
-node_modules/
-*/node_modules/
-**/node_modules/**
-electron-app/node_modules/
-electron-app/dist/
-# Explicitly excluding dist directory with all contents
-electron-app/dist/**
-electron-app/.env
-
-# Specific large files
-**/secure-sign-in-app
-*.AppImage
-*.deb
-*.rpm
-*.snap
-*.tar.gz
-*.tar.xz
-*.dmg
-*.exe
-
-# Temporary files
-*.tmp
-temp_*
-backup/
-
-# Binary files
-# *.png # Keep AppImage icon if needed, but generally ignore binaries
-# *.jpg
-# *.jpeg
-# *.gif
-# *.ico
-# *.svg
-
-# Database
-*.db
-*.sqlite
-
-# Configuration
-.config/ 
