@@ -22,3 +22,22 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Go vendor directory
+vendor/
+
+# Environment files
+.env
+
+# Temporary files
+temp_*.html
+temp_*.js
+nohup.out
+
+# Config and data directories
+.config/
+scripts/data/
+static/images/backup/
+
+# Go binary
+main
