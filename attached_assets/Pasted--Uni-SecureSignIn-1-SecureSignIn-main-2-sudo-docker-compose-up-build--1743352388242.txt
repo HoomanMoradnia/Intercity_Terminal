@@ -1,0 +1,21 @@
+ ~/Uni/SecureSignIn(1)/SecureSignIn  main !2  sudo docker compose up --build                                                                                                                               127 ✘  41s  19:32:09 
+WARN[0000] /home/arvinzaheri/Uni/SecureSignIn(1)/SecureSignIn/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
+Compose can now delegate builds to bake for better performance.
+ To do so, set COMPOSE_BAKE=true.
+[+] Building 1.6s (8/10)                                                                                                                                                                                               docker:default
+ => [app internal] load build definition from Dockerfile                                                                                                                                                                         0.0s
+ => => transferring dockerfile: 417B                                                                                                                                                                                             0.0s
+ => [app internal] load metadata for docker.io/library/golang:1.20-alpine                                                                                                                                                        1.2s
+ => [app internal] load .dockerignore                                                                                                                                                                                            0.0s
+ => => transferring context: 2B                                                                                                                                                                                                  0.0s
+ => [app 1/6] FROM docker.io/library/golang:1.20-alpine@sha256:e47f121850f4e276b2b210c56df3fda9191278dd84a3a442bfe0b09934462a8f                                                                                                  0.0s
+ => [app internal] load build context                                                                                                                                                                                            0.0s
+ => => transferring context: 23.49kB                                                                                                                                                                                             0.0s
+ => CACHED [app 2/6] WORKDIR /app                                                                                                                                                                                                0.0s
+ => CACHED [app 3/6] COPY go.mod go.sum ./                                                                                                                                                                                       0.0s
+ => ERROR [app 4/6] RUN go mod download                                                                                                                                                                                          0.3s
+------
+ > [app 4/6] RUN go mod download:
+0.243 go: github.com/lib/pq@v1.10.9: git init --bare in /go/pkg/mod/cache/vcs/6c68f1e99762541dedc16bb282120793c0c7856d1615a0bc98f71833d509620e: exec: "git": executable file not found in $PATH
+------
+failed to solve: process "/bin/sh -c go mod download" did not complete successfully: exit code: 1
