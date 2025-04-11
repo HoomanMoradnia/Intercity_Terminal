@@ -13,7 +13,7 @@
     
     <div class="container">
         <nav class="nav">
-            <div style="display: flex; align-items: center;">
+            <div>
                 {{if .IsLoggedIn}}
                 <a href="/dashboard?user={{.Username}}" class="nav-item {{if eq .ActivePage "dashboard"}}active{{end}}">Dashboard</a>
                 {{end}}

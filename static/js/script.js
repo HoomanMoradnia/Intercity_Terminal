@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Handle password visibility toggle for all password fields
-    const setupPasswordToggle = function(passwordId, toggleId) {
+    window.setupPasswordToggle = function(passwordId, toggleId) {
         const passwordField = document.getElementById(passwordId);
         const toggleButton = document.getElementById(toggleId);
         
@@ -59,9 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const registerForm = document.getElementById('registerForm');
     if (registerForm) {
         registerForm.addEventListener('submit', function(event) {
-            const username = document.getElementById('registerUsername').value.trim();
-            const password = document.getElementById('registerPassword').value.trim();
-            const confirmPassword = document.getElementById('confirmPassword').value.trim();
+            // Enable validation instead of disabling it
             let valid = true;
             
             // Reset error messages
@@ -69,22 +67,54 @@ document.addEventListener('DOMContentLoaded', function() {
                 el.remove();
             });
             
+            // Get form values
+            const username = document.getElementById('registerUsername').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const dob = document.getElementById('dob').value.trim();
+            const ssn = document.getElementById('ssn').value.trim();
+            
+            // Validate username
             if (!username) {
                 valid = false;
                 showError('registerUsername', 'Username is required');
-            } else if (username.length < 4) {
-                valid = false;
-                showError('registerUsername', 'Username must be at least 4 characters');
             }
             
+            // Validate email
+            if (!email) {
+                valid = false;
+                showError('email', 'Email is required');
+            } else if (!isValidEmail(email)) {
+                valid = false;
+                showError('email', 'Please enter a valid email address');
+            }
+            
+            // Validate SSN
+            if (!ssn) {
+                valid = false;
+                showError('ssn', 'SSN is required');
+            } else if (!isValidSSN(ssn)) {
+                valid = false;
+                showError('ssn', 'Please enter a valid SSN');
+            }
+            
+            // Validate DOB
+            if (!dob) {
+                valid = false;
+                showError('dob', 'Date of Birth is required');
+            }
+            
+            // Validate password
             if (!password) {
                 valid = false;
                 showError('registerPassword', 'Password is required');
-            } else if (password.length < 6) {
+            } else if (password.length < 8) {
                 valid = false;
-                showError('registerPassword', 'Password must be at least 6 characters');
+                showError('registerPassword', 'Password must be at least 8 characters');
             }
             
+            // Validate password confirmation
             if (!confirmPassword) {
                 valid = false;
                 showError('confirmPassword', 'Please confirm your password');
@@ -141,6 +171,38 @@ document.addEventListener('DOMContentLoaded', function() {
     function isValidEmail(email) {
         const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
         return re.test(String(email).toLowerCase());
+    }
+    
+    // SSN validation helper
+    function isValidSSN(ssn) {
+        // Remove any non-digit characters
+        const digitsOnly = ssn.replace(/\D/g, '');
+        
+        // Check if it's 9 digits
+        if (digitsOnly.length !== 9) {
+            return false;
+        }
+        
+        // Check for invalid SSN patterns
+        // First 3 digits can't be 000, 666, or 900-999
+        const firstThree = parseInt(digitsOnly.substring(0, 3));
+        if (firstThree === 0 || firstThree === 666 || (firstThree >= 900 && firstThree <= 999)) {
+            return false;
+        }
+        
+        // Middle 2 digits can't be 00
+        const middleTwo = parseInt(digitsOnly.substring(3, 5));
+        if (middleTwo === 0) {
+            return false;
+        }
+        
+        // Last 4 digits can't be 0000
+        const lastFour = parseInt(digitsOnly.substring(5, 9));
+        if (lastFour === 0) {
+            return false;
+        }
+        
+        return true;
     }
     
     // Auto-hide alerts after 5 seconds

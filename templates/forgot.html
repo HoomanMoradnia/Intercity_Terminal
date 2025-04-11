@@ -1,41 +1,352 @@
 {{define "content"}}
 <div class="auth-container">
     <div class="auth-card">
-        <h1 class="auth-card-title">Forgot Password</h1>
-        <p style="text-align: center; color: #666; margin-bottom: 1.5rem;">Enter your username, SSN, and date of birth to verify your identity.</p>
-
+        <h1 class="auth-card-title">Reset Password</h1>
+        
         {{if .Error}}
-        <div class="alert alert-error">{{.Error}}</div>
+        <div class="alert alert-error">
+            {{.Error}}
+        </div>
         {{end}}
-
+        
         {{if .Success}}
-        <div class="alert alert-success">{{.Success}}</div>
+        <div class="alert alert-success">
+            {{if ne .Success "true"}}
+            {{.Success}}
+            {{end}}
+        </div>
         {{end}}
-
+        
         <form id="forgotForm" action="/forgot" method="POST">
+            {{if or (eq .Success "true") (ne .Success "")}}
+            <!-- Keep email in a hidden field -->
+            <input type="hidden" name="email" value="{{.Email}}">
+            {{else}}
             <div class="form-group">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" id="username" name="username" class="form-input" placeholder="Your username" autocomplete="username" required>
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" class="form-input" id="email" name="email" value="{{.Email}}" required>
+                <button type="submit" class="btn btn-secondary mt-2" id="sendCodeBtn">Send Reset Code</button>
             </div>
-
+            {{end}}
+            
+            {{if or (eq .Success "true") (and (ne .Success "") (not .Error))}}
             <div class="form-group">
-                <label for="ssn" class="form-label">Social Security Number (SSN)</label>
-                <input type="text" id="ssn" name="ssn" class="form-input" placeholder="XXX-XX-XXXX" autocomplete="off" required pattern="\d{3}-?\d{2}-?\d{4}" title="Enter SSN in XXX-XX-XXXX or XXXXXXXXX format">
+                <label for="code-input-1" class="form-label">Reset Code</label>
+                <!-- Hidden input to store the combined verification code -->
+                <input type="hidden" id="resetCode" name="resetCode" value="">
+                
+                <!-- Modern verification code input with separated character boxes -->
+                <div class="verification-code-container">
+                    <input type="text" class="code-input" id="code-input-1" maxlength="1" pattern="[0-9a-zA-Z]" inputmode="text" autocomplete="off">
+                    <input type="text" class="code-input" id="code-input-2" maxlength="1" pattern="[0-9a-zA-Z]" inputmode="text" autocomplete="off">
+                    <input type="text" class="code-input" id="code-input-3" maxlength="1" pattern="[0-9a-zA-Z]" inputmode="text" autocomplete="off">
+                    <input type="text" class="code-input" id="code-input-4" maxlength="1" pattern="[0-9a-zA-Z]" inputmode="text" autocomplete="off">
+                    <input type="text" class="code-input" id="code-input-5" maxlength="1" pattern="[0-9a-zA-Z]" inputmode="text" autocomplete="off">
+                    <input type="text" class="code-input" id="code-input-6" maxlength="1" pattern="[0-9a-zA-Z]" inputmode="text" autocomplete="off">
+                </div>
             </div>
-
+            
             <div class="form-group">
-                <label for="dob" class="form-label">Date of Birth</label>
-                <input type="date" id="dob" name="dob" class="form-input" placeholder="YYYY-MM-DD" autocomplete="bday" required>
+                <label for="newPassword" class="form-label">New Password</label>
+                <div class="password-wrapper">
+                    <input type="password" class="form-input" id="newPassword" name="newPassword" placeholder="Enter your new password" required>
+                    <button type="button" id="toggleNewPassword" class="password-toggle" aria-label="Toggle password visibility">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
             </div>
-
+            
+            <div class="form-group">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <div class="password-wrapper">
+                    <input type="password" class="form-input" id="confirmPassword" name="confirmPassword" placeholder="Confirm your new password" required>
+                    <button type="button" id="toggleConfirmPassword" class="password-toggle" aria-label="Toggle password visibility">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
             <div style="text-align: center; margin-top: 1.5rem;">
-                <button type="submit" class="auth-button auth-button-primary" style="width: 100%;">Verify Identity</button>
+                <button type="submit" class="auth-button auth-button-primary" style="width: 60%; margin: 0 auto; display: block;">Reset Password</button>
             </div>
-
-            <div style="text-align: center; margin-top: 1rem;">
-                <a href="/login" class="forgot-link">Back to login</a>
+            {{end}}
+            
+            <div class="forgot-password">
+                <span>Remember your password?</span>
+                <a href="/login" class="forgot-link">Sign in</a>
+            </div>
+            
+            <div class="forgot-password" style="margin-top: 0.5rem;">
+                <span>Use security question instead?</span>
+                <a href="/security-reset" class="forgot-link">Security Question Reset</a>
             </div>
         </form>
     </div>
 </div>
+
+<style>
+/* Styling for the verification code input */
+.verification-code-container {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.code-input {
+    width: 40px;
+    height: 50px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 500;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.code-input:focus {
+    border-color: #1d3557;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(29, 53, 87, 0.2);
+    transform: translateY(-1px);
+}
+
+.code-input.filled {
+    background-color: #e6f7ff;
+    border-color: #1d3557;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Forgot password form initialized");
+    
+    // Direct implementation of password toggle that doesn't rely on global functions
+    const togglePasswordVisibility = function(inputId, toggleBtnId) {
+        const passwordInput = document.getElementById(inputId);
+        const toggleBtn = document.getElementById(toggleBtnId);
+        
+        if (!passwordInput || !toggleBtn) return;
+        
+        toggleBtn.addEventListener('click', function() {
+            // Toggle between password and text type
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Change the icon based on the input type
+            if (type === 'password') {
+                // Show eye icon (password is hidden)
+                toggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+            } else {
+                // Show crossed eye icon (password is visible)
+                toggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+            }
+        });
+    };
+    
+    // Setup the verification code input functionality
+    const setupVerificationCodeInputs = function() {
+        const codeInputs = document.querySelectorAll('.code-input');
+        const resetCodeInput = document.getElementById('resetCode');
+        
+        if (codeInputs.length === 0 || !resetCodeInput) {
+            console.log("Verification code inputs not found");
+            return;
+        }
+        
+        console.log("Setting up verification code inputs");
+        
+        // Focus the first input when the page loads
+        codeInputs[0].focus();
+        
+        // Add event listeners to handle input and navigation
+        codeInputs.forEach((input, index) => {
+            // Handle input changes
+            input.addEventListener('input', function(e) {
+                // Automatically convert to uppercase for better readability
+                this.value = this.value.toUpperCase();
+                
+                // Add the 'filled' class for styling
+                if (this.value) {
+                    this.classList.add('filled');
+                } else {
+                    this.classList.remove('filled');
+                }
+                
+                // Focus next input if available
+                if (this.value && index < codeInputs.length - 1) {
+                    codeInputs[index + 1].focus();
+                }
+                
+                // Update the hidden input with the complete code
+                updateHiddenCodeInput();
+            });
+            
+            // Handle backspace key
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && !this.value && index > 0) {
+                    // If current input is empty and backspace is pressed, focus previous input
+                    codeInputs[index - 1].focus();
+                }
+            });
+            
+            // Handle paste event to distribute characters across inputs
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                
+                if (pastedText) {
+                    // Distribute the pasted characters across the inputs
+                    const chars = pastedText.split('');
+                    for (let i = 0; i < codeInputs.length && i < chars.length; i++) {
+                        codeInputs[index + i] ? codeInputs[index + i].value = chars[i].toUpperCase() : null;
+                        if (codeInputs[index + i]) {
+                            codeInputs[index + i].classList.add('filled');
+                        }
+                    }
+                    
+                    // Focus the next empty input or the last input
+                    const nextEmptyIndex = [...codeInputs].findIndex((inp, idx) => idx >= index && !inp.value);
+                    if (nextEmptyIndex !== -1) {
+                        codeInputs[nextEmptyIndex].focus();
+                    } else {
+                        codeInputs[codeInputs.length - 1].focus();
+                    }
+                    
+                    // Update the hidden input
+                    updateHiddenCodeInput();
+                }
+            });
+        });
+        
+        // Function to update the hidden input with the complete verification code
+        function updateHiddenCodeInput() {
+            const code = Array.from(codeInputs).map(input => input.value).join('');
+            resetCodeInput.value = code;
+            console.log("Updated verification code:", code);
+        }
+    };
+    
+    // Apply password toggle functionality
+    if (document.getElementById('newPassword')) {
+        togglePasswordVisibility('newPassword', 'toggleNewPassword');
+    }
+    if (document.getElementById('confirmPassword')) {
+        togglePasswordVisibility('confirmPassword', 'toggleConfirmPassword');
+    }
+    
+    // Initialize verification code input if available
+    setupVerificationCodeInputs();
+    
+    const forgotForm = document.getElementById('forgotForm');
+    if (forgotForm) {
+        forgotForm.addEventListener('submit', function(event) {
+            const email = document.querySelector('input[name="email"]').value.trim();
+            const resetCode = document.getElementById('resetCode');
+            const newPassword = document.getElementById('newPassword');
+            const confirmPassword = document.getElementById('confirmPassword');
+            
+            let valid = true;
+            
+            // Clear previous error messages
+            document.querySelectorAll('.error-message').forEach(el => el.remove());
+            
+            if (!email) {
+                valid = false;
+                showError('email', 'Email is required');
+            } else if (!isValidEmail(email)) {
+                valid = false;
+                showError('email', 'Please enter a valid email address');
+            }
+            
+            // If we're in the reset code phase
+            if (resetCode && newPassword && confirmPassword) {
+                console.log("Verification code phase detected");
+                
+                // For the code inputs, re-check the hidden combined value immediately before submission
+                if (resetCode) {
+                    // Make sure the code is updated from the individual inputs one last time
+                    const codeInputs = document.querySelectorAll('.code-input');
+                    if (codeInputs.length > 0) {
+                        const code = Array.from(codeInputs).map(input => input.value).join('');
+                        resetCode.value = code;
+                        console.log("Final verification code on submit:", code);
+                    }
+                }
+                
+                // Now validate
+                if (!resetCode.value || resetCode.value.length !== 6) {
+                    valid = false;
+                    showError('code-input-1', 'Please enter the complete 6-character reset code');
+                }
+                
+                if (!newPassword.value) {
+                    valid = false;
+                    showError('newPassword', 'New password is required');
+                } else if (newPassword.value.length < 8) {
+                    valid = false;
+                    showError('newPassword', 'Password must be at least 8 characters');
+                }
+                
+                if (!confirmPassword.value) {
+                    valid = false;
+                    showError('confirmPassword', 'Please confirm your password');
+                } else if (newPassword.value !== confirmPassword.value) {
+                    valid = false;
+                    showError('confirmPassword', 'Passwords do not match');
+                }
+            }
+            
+            if (!valid) {
+                event.preventDefault();
+                console.log("Form submission prevented due to validation errors");
+            } else {
+                console.log("Form passed validation, submitting...");
+            }
+        });
+    }
+    
+    function showError(fieldId, message) {
+        const field = document.getElementById(fieldId) || document.querySelector('input[name="' + fieldId + '"]');
+        if (!field) return;
+        
+        // For the verification code, we want to show the error message below the container
+        if (fieldId.startsWith('code-input')) {
+            const container = document.querySelector('.verification-code-container');
+            if (container) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.style.color = 'var(--error-color)';
+                errorDiv.style.fontSize = '0.75rem';
+                errorDiv.style.textAlign = 'center';
+                errorDiv.style.marginTop = '0.25rem';
+                errorDiv.textContent = message;
+                container.parentNode.insertBefore(errorDiv, container.nextSibling);
+                return;
+            }
+        }
+        
+        // Regular error display for other fields
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.style.color = 'var(--error-color)';
+        errorDiv.style.fontSize = '0.75rem';
+        errorDiv.style.marginTop = '0.25rem';
+        errorDiv.textContent = message;
+        field.parentNode.appendChild(errorDiv);
+    }
+    
+    function isValidEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+});
+</script>
 {{end}}

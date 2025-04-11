@@ -2,20 +2,30 @@
 <div class="auth-container">
     <div class="auth-card" style="width: 600px; max-width: 90%;">
         <h1 class="auth-card-title">Welcome, {{.Username}}!</h1>
-        
+
         {{if .Success}}
         <div class="alert alert-success">{{.Success}}</div>
         {{end}}
-        
+
         {{if .Error}}
         <div class="alert alert-error">{{.Error}}</div>
         {{end}}
-        
+
         <div class="dashboard-section">
             <h2 class="section-title">Your Dashboard</h2>
-            <p class="dashboard-welcome">Welcome to your transportation portal dashboard. You can view system information and manage your account from here.</p>
+            <p class="dashboard-welcome">Welcome to your transportation portal dashboard. You can view system
+                information and manage your account from here.</p>
+
+            <div class="account-settings-box">
+                <h3>Account Security</h3>
+                <p>Enhance your account security by setting up or updating your security question.</p>
+                <a href="/setup-security" class="auth-button auth-button-secondary"
+                    style="display: inline-block; margin-top: 10px;">
+                    {{if .HasSecurityQ}}Update{{else}}Set Up{{end}} Security Question
+                </a>
+            </div>
         </div>
-        
+
         <div class="dashboard-section">
             <h2 class="section-title">Users</h2>
             <div class="table-responsive">
@@ -39,11 +49,12 @@
                 </table>
             </div>
         </div>
-        
+
         <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
-            <button id="showLogsBtn" class="auth-button auth-button-secondary" style="width: 100%;">Show Login Logs</button>
+            <button id="showLogsBtn" class="auth-button auth-button-secondary" style="width: 100%;">Show Login
+                Logs</button>
         </div>
-        
+
         <!-- Login logs section (hidden by default) -->
         <div id="loginLogsSection" class="dashboard-section" style="display: none; margin-top: 1.5rem;">
             <h2 class="section-title">Recent Login Activity</h2>
@@ -76,20 +87,43 @@
                 </table>
             </div>
         </div>
-        
-        <script>
-            // Add event listener for the Show Login Logs button
-            document.getElementById('showLogsBtn').addEventListener('click', function() {
-                var logsSection = document.getElementById('loginLogsSection');
-                if (logsSection.style.display === 'none') {
-                    logsSection.style.display = 'block';
-                    this.textContent = 'Hide Login Logs';
-                } else {
-                    logsSection.style.display = 'none';
-                    this.textContent = 'Show Login Logs';
-                }
-            });
-        </script>
     </div>
 </div>
+
+<style>
+    .account-settings-box {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+
+    .account-settings-box h3 {
+        margin-top: 0;
+        color: #343a40;
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+
+    .account-settings-box p {
+        color: #6c757d;
+        margin-bottom: 15px;
+        font-size: 0.9rem;
+    }
+</style>
+
+<script>
+    // Add event listener for the Show Login Logs button
+    document.getElementById('showLogsBtn').addEventListener('click', function() {
+        var logsSection = document.getElementById('loginLogsSection');
+        if (logsSection.style.display === 'none') {
+            logsSection.style.display = 'block';
+            this.textContent = 'Hide Login Logs';
+        } else {
+            logsSection.style.display = 'none';
+            this.textContent = 'Show Login Logs';
+        }
+    });
+</script>
 {{end}}

@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="auth-container">
     <div class="auth-card">
-        <h1 class="auth-card-title">Register Account</h1>
+        <h1 class="auth-card-title">{{if .HasSecurityQ}}Update{{else}}Set Up{{end}} Security Question</h1>
         
         {{if .Error}}
         <div class="alert alert-error">
@@ -15,29 +15,23 @@
         </div>
         {{end}}
         
-        <form id="registerForm" action="/register" method="POST">
-            <div class="form-group">
-                <label for="registerUsername" class="form-label">Username</label>
-                <input type="text" id="registerUsername" name="username" class="form-input" placeholder="Choose a username" autocomplete="username" required>
-            </div>
+        <p class="info-text">
+            Security questions help you recover your account if you forget your password. Choose a question and answer that is easy for you to remember but difficult for others to guess.
+        </p>
+        
+        <form id="setupSecurityForm" action="/setup-security" method="POST">
+            <input type="hidden" name="user_id" value="{{.UserID}}">
+            {{if .HasSecurityQ}}
+            <input type="hidden" name="question_id" value="{{.QuestionID}}">
             
             <div class="form-group">
-                <label for="email" class="form-label">Email Address</label>
-                <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email address" autocomplete="email" required>
+                <label class="form-label">Current Security Question</label>
+                <div class="security-question">{{.SecurityQuestion}}</div>
             </div>
+            {{end}}
             
             <div class="form-group">
-                <label for="ssn" class="form-label">Social Security Number (SSN)</label>
-                <input type="text" id="ssn" name="ssn" class="form-input" placeholder="XXX-XX-XXXX" autocomplete="off" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="dob" class="form-label">Date of Birth</label>
-                <input type="date" id="dob" name="dob" class="form-input" placeholder="YYYY-MM-DD" autocomplete="bday" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="security_question_type" class="form-label">Security Question</label>
+                <label for="security_question_type" class="form-label">{{if .HasSecurityQ}}New {{end}}Security Question</label>
                 <select id="security_question_type" class="form-input" onchange="toggleSecurityQuestion()">
                     <option value="">-- Select a security question --</option>
                     <option value="What was the name of your first pet?">What was the name of your first pet?</option>
@@ -58,47 +52,53 @@
             </div>
             
             <div class="form-group">
-                <label for="security_answer" class="form-label">Security Answer</label>
+                <label for="security_answer" class="form-label">{{if .HasSecurityQ}}New {{end}}Security Answer</label>
                 <input type="text" id="security_answer" name="security_answer" class="form-input" placeholder="Enter your answer" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="registerPassword" class="form-label">Password</label>
-                <div class="password-wrapper">
-                    <input type="password" id="registerPassword" name="password" class="form-input" placeholder="Create a password" autocomplete="new-password" required>
-                    <button type="button" id="toggleRegisterPassword" class="password-toggle" aria-label="Toggle password visibility">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="confirmPassword" class="form-label">Confirm Password</label>
-                <div class="password-wrapper">
-                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" placeholder="Confirm your password" autocomplete="new-password" required>
-                    <button type="button" id="toggleConfirmPassword" class="password-toggle" aria-label="Toggle password visibility">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
-                </div>
+                <p class="hint-text">Note: Your answer is not case-sensitive.</p>
             </div>
             
             <div style="text-align: center; margin-top: 1.5rem;">
-                <button type="submit" class="auth-button auth-button-primary" style="width: 60%; margin: 0 auto; display: block;">Create Account</button>
+                <button type="submit" class="auth-button auth-button-primary" style="width: 60%; margin: 0 auto; display: block;">
+                    {{if .HasSecurityQ}}Update{{else}}Save{{end}} Security Question
+                </button>
             </div>
             
-            <div class="forgot-password">
-                <span>Already have an account?</span>
-                <a href="/login" class="forgot-link">Sign In</a>
+            <div class="back-link">
+                <a href="/dashboard" class="forgot-link">Back to Dashboard</a>
             </div>
         </form>
     </div>
 </div>
+
+<style>
+.security-question {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 15px;
+    font-weight: 500;
+}
+
+.info-text {
+    margin-bottom: 20px;
+    color: #666;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.hint-text {
+    color: #6c757d;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+.back-link {
+    text-align: center;
+    margin-top: 1rem;
+}
+</style>
 
 <script>
     function toggleSecurityQuestion() {
@@ -120,9 +120,9 @@
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         // Set hidden input value on form submit
-        const registerForm = document.getElementById('registerForm');
-        if (registerForm) {
-            registerForm.addEventListener('submit', function(event) {
+        const setupForm = document.getElementById('setupSecurityForm');
+        if (setupForm) {
+            setupForm.addEventListener('submit', function(event) {
                 const selectElement = document.getElementById('security_question_type');
                 const securityQuestionInput = document.getElementById('security_question');
                 
@@ -139,4 +139,4 @@
         }
     });
 </script>
-{{end}}
+{{end}} 

@@ -1,0 +1,218 @@
+{{define "content"}}
+<div class="auth-container">
+    <div class="auth-card">
+        <h1 class="auth-card-title">Reset Password with Security Question</h1>
+
+        {{if .Error}}
+        <div class="alert alert-error">
+            {{.Error}}
+        </div>
+        {{end}}
+
+        {{if .Success}}
+        <div class="alert alert-success">
+            {{.Success}}
+        </div>
+        {{end}}
+
+        <form id="securityResetForm" action="/security-reset" method="POST">
+            <!-- Step 1: Enter username to find account -->
+            {{if not .SecurityQuestion}}
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-input" id="username" name="username" value="{{.Username}}" required>
+                <button type="submit" class="btn btn-secondary mt-2" id="findAccountBtn">Find Account</button>
+            </div>
+            {{end}}
+
+            <!-- Step 2: Answer security question and reset password -->
+            {{if .SecurityQuestion}}
+            <input type="hidden" name="user_id" value="{{.UserID}}">
+            <input type="hidden" name="question_id" value="{{.QuestionID}}">
+            <input type="hidden" name="username" value="{{.Username}}">
+
+            <div class="form-group">
+                <label class="form-label">Security Question</label>
+                <div class="security-question">{{.SecurityQuestion}}</div>
+            </div>
+
+            <div class="form-group">
+                <label for="security_answer" class="form-label">Your Answer</label>
+                <input type="text" class="form-input" id="security_answer" name="security_answer" required>
+                <p class="hint-text">Note: Your answer is not case-sensitive.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="newPassword" class="form-label">New Password</label>
+                <div class="password-wrapper">
+                    <input type="password" class="form-input" id="newPassword" name="newPassword"
+                        placeholder="Enter your new password" required>
+                    <button type="button" id="toggleNewPassword" class="password-toggle"
+                        aria-label="Toggle password visibility">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <div class="password-wrapper">
+                    <input type="password" class="form-input" id="confirmPassword" name="confirmPassword"
+                        placeholder="Confirm your new password" required>
+                    <button type="button" id="toggleConfirmPassword" class="password-toggle"
+                        aria-label="Toggle password visibility">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button type="submit" class="auth-button auth-button-primary"
+                    style="width: 60%; margin: 0 auto; display: block;">Reset Password</button>
+            </div>
+            {{end}}
+
+            <div class="forgot-password">
+                <span>Remember your password?</span>
+                <a href="/login" class="forgot-link">Sign in</a>
+            </div>
+
+            <div class="forgot-password" style="margin-top: 0.5rem;">
+                <span>Use email to reset?</span>
+                <a href="/forgot" class="forgot-link">Email Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .security-question {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 15px;
+        font-weight: 500;
+    }
+
+    .hint-text {
+        color: #6c757d;
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+        font-style: italic;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Security question reset form initialized");
+    
+    // Password toggle functionality
+    const togglePasswordVisibility = function(inputId, toggleBtnId) {
+        const passwordInput = document.getElementById(inputId);
+        const toggleBtn = document.getElementById(toggleBtnId);
+        
+        if (!passwordInput || !toggleBtn) return;
+        
+        toggleBtn.addEventListener('click', function() {
+            // Toggle between password and text type
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Change the icon based on the input type
+            if (type === 'password') {
+                // Show eye icon (password is hidden)
+                toggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+            } else {
+                // Show crossed eye icon (password is visible)
+                toggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+            }
+        });
+    };
+    
+    // Apply password toggle functionality
+    if (document.getElementById('newPassword')) {
+        togglePasswordVisibility('newPassword', 'toggleNewPassword');
+    }
+    if (document.getElementById('confirmPassword')) {
+        togglePasswordVisibility('confirmPassword', 'toggleConfirmPassword');
+    }
+    
+    // Form validation
+    const securityResetForm = document.getElementById('securityResetForm');
+    if (securityResetForm) {
+        securityResetForm.addEventListener('submit', function(event) {
+            // Clear previous error messages
+            document.querySelectorAll('.error-message').forEach(el => el.remove());
+            
+            let valid = true;
+            
+            // Validate username if it's the first step
+            const username = document.querySelector('input[name="username"]');
+            if (username && !document.querySelector('input[name="security_answer"]')) {
+                if (!username.value.trim()) {
+                    valid = false;
+                    showError('username', 'Username is required');
+                }
+            }
+            
+            // Validate security answer and passwords if it's the second step
+            const securityAnswer = document.getElementById('security_answer');
+            const newPassword = document.getElementById('newPassword');
+            const confirmPassword = document.getElementById('confirmPassword');
+            
+            if (securityAnswer && newPassword && confirmPassword) {
+                if (!securityAnswer.value.trim()) {
+                    valid = false;
+                    showError('security_answer', 'Security answer is required');
+                }
+                
+                if (!newPassword.value) {
+                    valid = false;
+                    showError('newPassword', 'New password is required');
+                } else if (newPassword.value.length < 8) {
+                    valid = false;
+                    showError('newPassword', 'Password must be at least 8 characters');
+                }
+                
+                if (!confirmPassword.value) {
+                    valid = false;
+                    showError('confirmPassword', 'Please confirm your password');
+                } else if (newPassword.value !== confirmPassword.value) {
+                    valid = false;
+                    showError('confirmPassword', 'Passwords do not match');
+                }
+            }
+            
+            if (!valid) {
+                event.preventDefault();
+                console.log("Form submission prevented due to validation errors");
+            } else {
+                console.log("Form passed validation, submitting...");
+            }
+        });
+    }
+    
+    function showError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        if (!field) return;
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.style.color = 'var(--error-color)';
+        errorDiv.style.fontSize = '0.75rem';
+        errorDiv.style.marginTop = '0.25rem';
+        errorDiv.textContent = message;
+        field.parentNode.appendChild(errorDiv);
+    }
+});
+</script>
+{{end}}
