@@ -130,6 +130,7 @@ func initializeSchema() error {
 	CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		username TEXT UNIQUE NOT NULL,
+		email TEXT NOT NULL,
 		password TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		date_of_birth TEXT,
@@ -157,6 +158,39 @@ func initializeSchema() error {
 		return fmt.Errorf("failed to create login_history table: %w", err)
 	}
 
+	// Create reset_codes table
+	resetCodesTableSQL := `
+	CREATE TABLE IF NOT EXISTS reset_codes (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		code TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		expires_at TIMESTAMP NOT NULL,
+		used INTEGER DEFAULT 0,
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	);
+	`
+	_, err = DB.Exec(resetCodesTableSQL)
+	if err != nil {
+		return fmt.Errorf("failed to create reset_codes table: %w", err)
+	}
+
+	// Create security_questions table
+	securityQuestionsTableSQL := `
+	CREATE TABLE IF NOT EXISTS security_questions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		question TEXT NOT NULL,
+		answer_hash TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	);
+	`
+	_, err = DB.Exec(securityQuestionsTableSQL)
+	if err != nil {
+		return fmt.Errorf("failed to create security_questions table: %w", err)
+	}
+
 	// Add unique index separately
 	usernameIndexSQL := `CREATE UNIQUE INDEX IF NOT EXISTS idx_username ON users(username);`
 	_, err = DB.Exec(usernameIndexSQL)
@@ -164,13 +198,96 @@ func initializeSchema() error {
 		log.Printf("Warning: Could not ensure username index (might already exist): %v", err)
 	}
 
+	// Run migrations to update existing schema if needed
+	err = migrateSchema()
+	if err != nil {
+		return fmt.Errorf("failed to migrate database schema: %w", err)
+	}
+
+	return nil
+}
+
+// migrateSchema updates the database schema if it is outdated
+func migrateSchema() error {
+	log.Println("Checking if database schema needs migration...")
+
+	// Check if email column exists in users table
+	var count int
+	err := DB.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='email'`).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check if email column exists: %w", err)
+	}
+
+	if count == 0 {
+		log.Println("Adding email column to users table...")
+		// SQLite doesn't support adding UNIQUE constraint with ALTER TABLE,
+		// so we just add the column without the constraint
+		_, err := DB.Exec(`ALTER TABLE users ADD COLUMN email TEXT`)
+		if err != nil {
+			return fmt.Errorf("failed to add email column: %w", err)
+		}
+		log.Println("Email column added successfully")
+	} else {
+		log.Println("Email column already exists in users table")
+	}
+
+	// Check if security_questions table exists
+	var tableExists int
+	err = DB.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='security_questions'`).Scan(&tableExists)
+	if err != nil {
+		return fmt.Errorf("failed to check if security_questions table exists: %w", err)
+	}
+
+	if tableExists == 0 {
+		log.Println("Creating security_questions table...")
+		securityQuestionsTableSQL := `
+		CREATE TABLE IF NOT EXISTS security_questions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL,
+			question TEXT NOT NULL,
+			answer_hash TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		);
+		`
+		_, err := DB.Exec(securityQuestionsTableSQL)
+		if err != nil {
+			return fmt.Errorf("failed to create security_questions table: %w", err)
+		}
+		log.Println("security_questions table created successfully")
+	} else {
+		log.Println("security_questions table already exists")
+	}
+
 	return nil
 }
 
 // AddUser inserts a new user into the database (SQLite).
-func AddUser(username, passwordHash, dob, ssn string) (int64, error) {
-	query := "INSERT INTO users (username, password, date_of_birth, social_security) VALUES (?, ?, ?, ?)"
-	result, err := DB.Exec(query, username, passwordHash, dob, ssn)
+func AddUser(username, passwordHash, dob, ssn string, email string) (int64, error) {
+	// Validate required fields
+	if username == "" || passwordHash == "" || email == "" {
+		return 0, fmt.Errorf("username, password, and email are required fields")
+	}
+
+	// Check if email column exists
+	var count int
+	err := DB.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='email'`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to check if email column exists: %w", err)
+	}
+
+	var result sql.Result
+	if count > 0 {
+		// Table has email column
+		query := "INSERT INTO users (username, password, date_of_birth, social_security, email) VALUES (?, ?, ?, ?, ?)"
+		result, err = DB.Exec(query, username, passwordHash, dob, ssn, email)
+	} else {
+		// Fall back to original schema without email
+		query := "INSERT INTO users (username, password, date_of_birth, social_security) VALUES (?, ?, ?, ?)"
+		result, err = DB.Exec(query, username, passwordHash, dob, ssn)
+		log.Printf("Warning: User created without email because email column doesn't exist")
+	}
+
 	if err != nil {
 		return 0, fmt.Errorf("error inserting user (sqlite): %w", err)
 	}
@@ -185,9 +302,45 @@ func AddUser(username, passwordHash, dob, ssn string) (int64, error) {
 
 // GetUserByUsername retrieves a user by their username (SQLite).
 func GetUserByUsername(username string) (*sql.Row, error) {
-	query := "SELECT id, username, date_of_birth, social_security, password FROM users WHERE username = ?"
-	row := DB.QueryRow(query, username)
+	// Check if email column exists
+	var count int
+	err := DB.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='email'`).Scan(&count)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if email column exists: %w", err)
+	}
+
+	var row *sql.Row
+	if count > 0 {
+		// Table has email column
+		query := "SELECT id, username, date_of_birth, social_security, password, email FROM users WHERE username = ?"
+		row = DB.QueryRow(query, username)
+	} else {
+		// Fall back to original schema without email
+		query := "SELECT id, username, date_of_birth, social_security, password, '' as email FROM users WHERE username = ?"
+		row = DB.QueryRow(query, username)
+	}
+
 	return row, nil // Error checking deferred to Scan
+}
+
+// GetUserByEmail retrieves a user by their email.
+func GetUserByEmail(email string) (*sql.Row, error) {
+	// Check if email column exists
+	var count int
+	err := DB.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='email'`).Scan(&count)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if email column exists: %w", err)
+	}
+
+	if count == 0 {
+		// Email column doesn't exist
+		return nil, fmt.Errorf("email column does not exist in users table")
+	}
+
+	// Return the same structure as GetUserByUsername for consistency
+	query := "SELECT id, username, date_of_birth, social_security, password, email FROM users WHERE email = ?"
+	row := DB.QueryRow(query, email)
+	return row, nil
 }
 
 // GetUserByID retrieves a user by their ID (SQLite).
@@ -246,4 +399,128 @@ func GetLoginHistory() (*sql.Rows, error) {
 		return nil, fmt.Errorf("error retrieving login history: %w", err)
 	}
 	return rows, nil
+}
+
+// StoreResetCode stores a new reset code for a user
+func StoreResetCode(userID int64, code string, expiresAt time.Time) error {
+	query := "INSERT INTO reset_codes (user_id, code, expires_at) VALUES (?, ?, ?)"
+	_, err := DB.Exec(query, userID, code, expiresAt)
+	if err != nil {
+		return fmt.Errorf("error storing reset code: %w", err)
+	}
+	return nil
+}
+
+// ValidateResetCode checks if a reset code is valid and not expired
+func ValidateResetCode(code string) (int64, error) {
+	query := `
+		SELECT user_id 
+		FROM reset_codes 
+		WHERE code = ? 
+		AND used = 0 
+		AND expires_at > CURRENT_TIMESTAMP
+		LIMIT 1
+	`
+	var userID int64
+	err := DB.QueryRow(query, code).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("invalid or expired reset code")
+		}
+		return 0, fmt.Errorf("error validating reset code: %w", err)
+	}
+	return userID, nil
+}
+
+// MarkResetCodeUsed marks a reset code as used
+func MarkResetCodeUsed(code string) error {
+	query := "UPDATE reset_codes SET used = 1 WHERE code = ?"
+	_, err := DB.Exec(query, code)
+	if err != nil {
+		return fmt.Errorf("error marking reset code as used: %w", err)
+	}
+	return nil
+}
+
+// CheckEmailExists checks if an email address already exists in the database
+func CheckEmailExists(email string) (bool, error) {
+	// Check if email column exists
+	var count int
+	err := DB.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='email'`).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if email column exists: %w", err)
+	}
+
+	if count == 0 {
+		// Email column doesn't exist, so no email can exist
+		return false, nil
+	}
+
+	// Check if email exists
+	var exists int
+	query := "SELECT COUNT(*) FROM users WHERE email = ?"
+	err = DB.QueryRow(query, email).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("error checking if email exists: %w", err)
+	}
+
+	return exists > 0, nil
+}
+
+// --- Security Questions Functions ---
+
+// AddSecurityQuestion adds a security question and answer for a user
+func AddSecurityQuestion(userID int64, question string, answerHash string) error {
+	query := "INSERT INTO security_questions (user_id, question, answer_hash) VALUES (?, ?, ?)"
+	_, err := DB.Exec(query, userID, question, answerHash)
+	if err != nil {
+		return fmt.Errorf("error adding security question for user ID %d: %w", userID, err)
+	}
+	return nil
+}
+
+// GetSecurityQuestionByUserID retrieves the security question for a user
+func GetSecurityQuestionByUserID(userID int64) (int64, string, string, error) {
+	query := "SELECT id, question, answer_hash FROM security_questions WHERE user_id = ? LIMIT 1"
+	var id int64
+	var question, answerHash string
+	err := DB.QueryRow(query, userID).Scan(&id, &question, &answerHash)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, "", "", fmt.Errorf("no security question found for user ID %d", userID)
+		}
+		return 0, "", "", fmt.Errorf("error getting security question for user ID %d: %w", userID, err)
+	}
+	return id, question, answerHash, nil
+}
+
+// UpdateSecurityQuestion updates a user's security question and answer
+func UpdateSecurityQuestion(questionID int64, question string, answerHash string) error {
+	query := "UPDATE security_questions SET question = ?, answer_hash = ? WHERE id = ?"
+	_, err := DB.Exec(query, question, answerHash, questionID)
+	if err != nil {
+		return fmt.Errorf("error updating security question ID %d: %w", questionID, err)
+	}
+	return nil
+}
+
+// HasSecurityQuestion checks if a user has set up a security question
+func HasSecurityQuestion(userID int64) (bool, error) {
+	query := "SELECT COUNT(*) FROM security_questions WHERE user_id = ?"
+	var count int
+	err := DB.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("error checking if user ID %d has security questions: %w", userID, err)
+	}
+	return count > 0, nil
+}
+
+// DeleteSecurityQuestions removes all security questions for a user
+func DeleteSecurityQuestions(userID int64) error {
+	query := "DELETE FROM security_questions WHERE user_id = ?"
+	_, err := DB.Exec(query, userID)
+	if err != nil {
+		return fmt.Errorf("error deleting security questions for user ID %d: %w", userID, err)
+	}
+	return nil
 }
