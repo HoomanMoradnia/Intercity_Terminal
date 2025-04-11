@@ -56,11 +56,18 @@ func main() {
 		}
 
 		// Copy the database file to the custom location
-		dbFilename := filepath.Base(*dbPath)
+		dbFilename := "securesignin.db.bak" // Use the standard backup name
 		backupPath := filepath.Join(*backupDir, dbFilename)
 
 		if *verbose {
 			log.Printf("Creating backup at %s...", backupPath)
+		}
+
+		// Remove existing backup if it exists
+		if _, err := os.Stat(backupPath); err == nil {
+			if err := os.Remove(backupPath); err != nil {
+				log.Fatalf("Failed to remove existing backup file: %v", err)
+			}
 		}
 
 		// Open source file
@@ -106,23 +113,5 @@ func main() {
 		fmt.Printf("✅ Database backup created at %s\n", backupPath)
 	}
 
-	// List existing backups
-	backupDirPath := *backupDir
-	if backupDirPath == "" {
-		backupDirPath = filepath.Join(filepath.Dir(*dbPath), "backups")
-	}
-
-	files, err := filepath.Glob(filepath.Join(backupDirPath, "*.db.bak"))
-	if err != nil {
-		log.Printf("Error listing backups: %v", err)
-	} else if len(files) > 0 {
-		fmt.Println("\nExisting backups:")
-		for i, f := range files {
-			info, err := os.Stat(f)
-			if err != nil {
-				continue
-			}
-			fmt.Printf("%d. %s (%s, %d bytes)\n", i+1, filepath.Base(f), info.ModTime().Format("2006-01-02 15:04:05"), info.Size())
-		}
-	}
+	fmt.Println("\nBackup complete. Your database is now safely backed up with a single backup file.")
 }
