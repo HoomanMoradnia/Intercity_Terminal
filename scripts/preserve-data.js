@@ -88,11 +88,10 @@ function restoreDatabase() {
     fs.copyFileSync(TEMP_BACKUP_PATH, DB_PATH);
     console.log(`Successfully restored database from ${TEMP_BACKUP_PATH} to ${DB_PATH}`);
     
-    // Make a timestamp backup as well
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const timestampBackup = path.join(BACKUP_DIR, `backup-${timestamp}.db`);
-    fs.copyFileSync(TEMP_BACKUP_PATH, timestampBackup);
-    console.log(`Created timestamped backup at ${timestampBackup}`);
+    // Create a single permanent backup file instead of timestamped backups
+    const permanentBackup = path.join(BACKUP_DIR, `current-backup.db`);
+    fs.copyFileSync(TEMP_BACKUP_PATH, permanentBackup);
+    console.log(`Updated permanent backup at ${permanentBackup}`);
     
     // Also try to restore to other potential locations if they exist
     for (const otherPath of POSSIBLE_DB_PATHS) {
