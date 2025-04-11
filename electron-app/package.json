@@ -1,0 +1,76 @@
+{
+  "name": "secure-sign-in-app",
+  "version": "1.0.0",
+  "description": "Secure Sign In Desktop Application",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "ELECTRON_IS_DEV=1 electron .",
+    "package-linux": "electron-builder --linux",
+    "package-win": "electron-builder --win",
+    "package-all": "electron-builder --linux --win -c.extraMetadata.homepage=https://github.com/placeholder -c.extraMetadata.author.name='Placeholder Name' -c.extraMetadata.author.email=placeholder@example.com -c.linux.maintainer='Placeholder Name <placeholder@example.com>'"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.securesignin.app",
+    "productName": "Secure Sign In",
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../scripts",
+        "to": "scripts",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../main",
+        "to": "backend/main"
+      },
+      {
+        "from": "../main.exe",
+        "to": "backend/main.exe",
+        "filter": ["!**/node_modules/**"]
+      },
+      {
+        "from": "../templates",
+        "to": "backend/templates",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../static",
+        "to": "backend/static",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../keys/encryption.key",
+        "to": "backend/keys/encryption.key"
+      }
+    ],
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Utility"
+    },
+    "win": {
+      "target": ["portable", "nsis"],
+      "icon": "build/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Secure Sign In",
+      "runAfterFinish": true,
+      "perMachine": true
+    }
+  }
+} 
