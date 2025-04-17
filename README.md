@@ -1,4 +1,4 @@
-# Intercity Portal
+# Intercity Terminal
 
 A management application for an intercity terminal, built with Go and featuring a desktop version using Electron. This project originated as a secure authentication system (SecureSignIn) and is currently under development.
 
