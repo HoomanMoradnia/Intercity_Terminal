@@ -18,13 +18,13 @@
         <form id="loginForm" action="/auth" method="POST">
             <div class="form-group">
                 <label for="username" class="form-label">Username or Email</label>
-                <input type="text" id="username" name="username" class="form-input" placeholder="Enter username or email" autocomplete="username" value="{{.Username}}">
+                <input type="text" id="username" name="username" class="form-input" placeholder="Enter username or email" autocomplete="username" value="{{.Username}}" maxlength="30">
             </div>
             
             <div class="form-group">
                 <label for="password" class="form-label">Password</label>
                 <div class="password-wrapper">
-                    <input type="password" id="password" name="password" class="form-input" placeholder="Password" autocomplete="current-password">
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Password" autocomplete="current-password" maxlength="30">
                     <button type="button" id="togglePassword" class="password-toggle">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>

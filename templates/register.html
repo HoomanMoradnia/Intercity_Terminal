@@ -18,17 +18,20 @@
         <form id="registerForm" action="/register" method="POST">
             <div class="form-group">
                 <label for="registerUsername" class="form-label">Username</label>
-                <input type="text" id="registerUsername" name="username" class="form-input" placeholder="Choose a username" autocomplete="username" required>
+                <input type="text" id="registerUsername" name="username" class="form-input" placeholder="Choose a username" autocomplete="username" required maxlength="30">
+                <div id="usernameError" class="form-error-message" style="display: none; color: red; font-size: 0.8em; margin-top: 4px;"></div>
             </div>
             
             <div class="form-group">
                 <label for="email" class="form-label">Email Address</label>
                 <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email address" autocomplete="email" required>
+                <div id="emailMessage" class="form-error-message" style="display: none; font-size: 0.9em; margin-top: 4px;"></div>
             </div>
             
             <div class="form-group">
                 <label for="ssn" class="form-label">Social Security Number (SSN)</label>
-                <input type="text" id="ssn" name="ssn" class="form-input" placeholder="XXX-XX-XXXX" autocomplete="off" required>
+                <input type="text" id="ssn" name="ssn" class="form-input" placeholder="XXX-XX-XXXX" autocomplete="off" required maxlength="11" inputmode="numeric">
+                <div id="ssnMessage" class="form-error-message" style="display: none; color: red; font-size: 0.8em; margin-top: 4px;"></div>
             </div>
             
             <div class="form-group">
@@ -50,22 +53,23 @@
                     <option value="What street did you grow up on?">What street did you grow up on?</option>
                     <option value="custom">I want to write my own question</option>
                 </select>
+                <div id="selectedQuestionFullText" class="form-text-display" style="display: none; font-size: 0.9em; margin-top: 5px; font-style: italic;"></div>
             </div>
             
             <div class="form-group" id="custom_question_container" style="display: none;">
                 <label for="security_question" class="form-label">Your Custom Question</label>
-                <input type="text" id="security_question" name="security_question" class="form-input" placeholder="Enter your security question">
+                <textarea id="security_question" name="security_question" class="form-input" placeholder="Enter your security question" maxlength="30" rows="2"></textarea>
             </div>
             
             <div class="form-group">
                 <label for="security_answer" class="form-label">Security Answer</label>
-                <input type="text" id="security_answer" name="security_answer" class="form-input" placeholder="Enter your answer" required>
+                <input type="text" id="security_answer" name="security_answer" class="form-input" placeholder="Enter your answer (max 30 characters)" required maxlength="30">
             </div>
             
             <div class="form-group">
                 <label for="registerPassword" class="form-label">Password</label>
                 <div class="password-wrapper">
-                    <input type="password" id="registerPassword" name="password" class="form-input" placeholder="Create a password" autocomplete="new-password" required>
+                    <input type="password" id="registerPassword" name="password" class="form-input" placeholder="Create a password" autocomplete="new-password" required maxlength="30">
                     <button type="button" id="toggleRegisterPassword" class="password-toggle" aria-label="Toggle password visibility">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -73,12 +77,20 @@
                         </svg>
                     </button>
                 </div>
+                <ul id="passwordCriteria" style="display: none; list-style: none; padding-left: 0; margin-top: 4px;">
+                    <li id="passwordLength" style="color: red;">★ At least 8 characters</li>
+                    <li id="passwordUpper" style="color: red;">★ At least one uppercase letter</li>
+                    <li id="passwordLower" style="color: red;">★ At least one lowercase letter</li>
+                    <li id="passwordNumber" style="color: red;">★ At least one number</li>
+                    <li id="passwordSymbol" style="color: red;">★ At least one special character</li>
+                </ul>
+                <div id="passwordMessage" class="form-error-message" style="display: none; font-size: 0.9em; margin-top: 4px;"></div>
             </div>
             
             <div class="form-group">
                 <label for="confirmPassword" class="form-label">Confirm Password</label>
                 <div class="password-wrapper">
-                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" placeholder="Confirm your password" autocomplete="new-password" required>
+                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" placeholder="Confirm your password" autocomplete="new-password" required maxlength="30">
                     <button type="button" id="toggleConfirmPassword" class="password-toggle" aria-label="Toggle password visibility">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -105,24 +117,223 @@
         const selectElement = document.getElementById('security_question_type');
         const customContainer = document.getElementById('custom_question_container');
         const securityQuestionInput = document.getElementById('security_question');
+        const fullTextDisplay = document.getElementById('selectedQuestionFullText');
         
         if (selectElement.value === 'custom') {
             customContainer.style.display = 'block';
             securityQuestionInput.required = true;
             securityQuestionInput.value = '';
+            fullTextDisplay.textContent = '';
+            fullTextDisplay.style.display = 'none';
         } else {
             customContainer.style.display = 'none';
             securityQuestionInput.required = false;
             securityQuestionInput.value = selectElement.value;
+            
+            if (selectElement.value !== '') {
+                fullTextDisplay.textContent = selectElement.options[selectElement.selectedIndex].text;
+                fullTextDisplay.style.display = 'block';
+            } else {
+                fullTextDisplay.textContent = '';
+                fullTextDisplay.style.display = 'none';
+            }
+        }
+    }
+    
+    function validateUsername() {
+        const usernameInput = document.getElementById('registerUsername');
+        const usernameError = document.getElementById('usernameError');
+        const username = usernameInput.value;
+
+        // Base Regex: 3-30 chars, Alphanumeric, underscore, hyphen
+        const baseRegex = /^[0-9A-Za-z_-]{3,30}$/;
+        let isValid = true;
+        let errorMessage = '';
+
+        if (!baseRegex.test(username)) {
+            isValid = false;
+            errorMessage = 'Username must be 3-30 characters long and contain only letters, numbers, underscores (_), or hyphens (-).';
+        } else if (/^[0-9]/.test(username)) {
+            isValid = false;
+            errorMessage = 'Username cannot start with a number.';
+        } else if (username.startsWith('_') || username.startsWith('-')) {
+            isValid = false;
+            errorMessage = 'Username cannot start with an underscore (_) or hyphen (-).';
+        } else if (username.endsWith('_') || username.endsWith('-')) {
+            isValid = false;
+            errorMessage = 'Username cannot end with an underscore (_) or hyphen (-).';
+        } else if (username.includes('__') || username.includes('--') || username.includes('-_') || username.includes('_-')) {
+            isValid = false;
+            errorMessage = 'Username cannot contain consecutive underscores (_) or hyphens (-).';
+        }
+
+        if (!isValid) {
+            usernameInput.style.borderColor = 'red';
+            usernameError.textContent = errorMessage;
+            usernameError.style.display = 'block';
+        } else {
+            usernameInput.style.borderColor = ''; // Reset to default
+            usernameError.style.display = 'none';
+        }
+        return isValid; // Return validation status
+    }
+    
+    // Add password validation function
+    function validatePassword() {
+        const pwd = document.getElementById('registerPassword').value;
+        const lengthCrit = document.getElementById('passwordLength');
+        const upperCrit = document.getElementById('passwordUpper');
+        const lowerCrit = document.getElementById('passwordLower');
+        const numberCrit = document.getElementById('passwordNumber');
+        const symbolCrit = document.getElementById('passwordSymbol');
+        let isValid = true;
+        if (pwd.length >= 8) { lengthCrit.style.color = 'green'; } else { lengthCrit.style.color = 'red'; isValid = false; }
+        if (/[A-Z]/.test(pwd)) { upperCrit.style.color = 'green'; } else { upperCrit.style.color = 'red'; isValid = false; }
+        if (/[a-z]/.test(pwd)) { lowerCrit.style.color = 'green'; } else { lowerCrit.style.color = 'red'; isValid = false; }
+        if (/[0-9]/.test(pwd)) { numberCrit.style.color = 'green'; } else { numberCrit.style.color = 'red'; isValid = false; }
+        if (/[^A-Za-z0-9]/.test(pwd)) { symbolCrit.style.color = 'green'; } else { symbolCrit.style.color = 'red'; isValid = false; }
+        return isValid;
+    }
+    
+    // Add email validation function
+    function validateEmail() {
+        const emailInput = document.getElementById('email');
+        const messageDiv = document.getElementById('emailMessage');
+        const email = emailInput.value;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (emailRegex.test(email)) {
+            messageDiv.textContent = 'Email format valid';
+            messageDiv.style.color = 'green';
+            return true;
+        } else {
+            messageDiv.textContent = 'Invalid format. Example: user@example.com';
+            messageDiv.style.color = 'red';
+            return false;
+        }
+    }
+    
+    // Add SSN validation function
+    function validateSSN() {
+        const ssnRaw = document.getElementById('ssn').value.replace(/\D/g, '');
+        const messageDiv = document.getElementById('ssnMessage');
+        if (ssnRaw.length === 9) {
+            messageDiv.textContent = 'SSN valid';
+            messageDiv.style.color = 'green';
+            return true;
+        } else {
+            messageDiv.textContent = 'SSN must be exactly 9 digits (XXX-XX-XXXX)';
+            messageDiv.style.color = 'red';
+            return false;
         }
     }
     
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
-        // Set hidden input value on form submit
+        // Add username validation listener
+        const usernameInput = document.getElementById('registerUsername');
+        if (usernameInput) {
+            usernameInput.addEventListener('input', validateUsername);
+            // Also validate on blur (when user clicks away)
+            usernameInput.addEventListener('blur', validateUsername);
+        }
+
+        // Add password validation listener
+        const passwordInput = document.getElementById('registerPassword');
+        if (passwordInput) {
+            passwordInput.addEventListener('input', validatePassword);
+            passwordInput.addEventListener('focus', function() {
+                document.getElementById('passwordCriteria').style.display = 'block';
+                document.getElementById('passwordMessage').style.display = 'none';
+            });
+            passwordInput.addEventListener('blur', function() {
+                document.getElementById('passwordCriteria').style.display = 'none';
+                const messageDiv = document.getElementById('passwordMessage');
+                if (validatePassword()) {
+                    messageDiv.textContent = 'Password is valid';
+                    messageDiv.style.color = 'green';
+                } else {
+                    messageDiv.textContent = 'Password does not meet all criteria';
+                    messageDiv.style.color = 'red';
+                }
+                messageDiv.style.display = 'block';
+            });
+        }
+
+        // Add email validation listener
+        const emailInput = document.getElementById('email');
+        if (emailInput) {
+            emailInput.addEventListener('focus', function() {
+                const msg = document.getElementById('emailMessage');
+                msg.style.display = 'block';
+                if (emailInput.value.trim() === '') {
+                    msg.textContent = 'Example: user@example.com';
+                    msg.style.color = 'red';
+                } else {
+                    validateEmail();
+                }
+            });
+            emailInput.addEventListener('input', validateEmail);
+            emailInput.addEventListener('blur', function() { validateEmail(); });
+        }
+
+        // Add SSN validation listeners
+        const ssnInput = document.getElementById('ssn');
+        if (ssnInput) {
+            // Format and validate during typing
+            ssnInput.addEventListener('input', function() {
+                let digits = this.value.replace(/\D/g, '');
+                if (digits.length > 9) digits = digits.slice(0, 9);
+                // format as XXX-XX-XXXX
+                let parts = [];
+                if (digits.length > 0) parts.push(digits.slice(0, 3));
+                if (digits.length > 3) parts.push(digits.slice(3, 5));
+                if (digits.length > 5) parts.push(digits.slice(5, 9));
+                this.value = parts.join('-');
+                validateSSN();
+            });
+            // Hide message when user focuses again
+            ssnInput.addEventListener('focus', function() {
+                document.getElementById('ssnMessage').style.display = 'none';
+            });
+            // On blur, validate and show message
+            ssnInput.addEventListener('blur', function() {
+                validateSSN();
+                document.getElementById('ssnMessage').style.display = 'block';
+            });
+        }
+
+        // Set hidden input value on form submit for security question
         const registerForm = document.getElementById('registerForm');
         if (registerForm) {
             registerForm.addEventListener('submit', function(event) {
+                // Prevent submission if username is invalid
+                if (!validateUsername()) {
+                    event.preventDefault();
+                    alert('Please fix the errors in the form before submitting.');
+                    return; // Stop further processing
+                }
+
+                // Prevent submission if password invalid
+                if (!validatePassword()) {
+                    event.preventDefault();
+                    alert('Password does not meet all criteria.');
+                    return;
+                }
+
+                // Prevent submission if email invalid
+                if (!validateEmail()) {
+                    event.preventDefault();
+                    alert('Please enter a valid email address.');
+                    return;
+                }
+
+                // Prevent submission if SSN invalid
+                if (!validateSSN()) {
+                    event.preventDefault();
+                    alert('Please enter a valid 9-digit SSN.');
+                    return;
+                }
+
                 const selectElement = document.getElementById('security_question_type');
                 const securityQuestionInput = document.getElementById('security_question');
                 
@@ -137,6 +348,9 @@
                 }
             });
         }
+
+        // Call the toggleSecurityQuestion initially to set correct state on load
+        toggleSecurityQuestion(); 
     });
 </script>
 {{end}}

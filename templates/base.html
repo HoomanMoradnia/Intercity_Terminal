@@ -16,6 +16,9 @@
             <div>
                 {{if .IsLoggedIn}}
                 <a href="/dashboard?user={{.Username}}" class="nav-item {{if eq .ActivePage "dashboard"}}active{{end}}">Dashboard</a>
+                {{if eq .UserRole "Admin"}}
+                <a href="/admin/dashboard" class="nav-item {{if eq .ActivePage "admin"}}active{{end}}" style="background-color: #e74c3c; color: white; padding: 0.25rem 0.75rem; border-radius: 4px;">Admin</a>
+                {{end}}
                 {{end}}
             </div>
             <div>

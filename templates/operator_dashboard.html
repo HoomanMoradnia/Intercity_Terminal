@@ -1,0 +1,579 @@
+{{define "content"}}
+<div class="dashboard-container">
+    <header class="dashboard-header">
+        <div class="logo">
+            <h1>BAMA</h1>
+            <p>Book your ticket as soon as possible.</p>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li class="active"><a href="/dashboard">Home</a></li>
+                <li><a href="/trip-plan">Trip plan</a></li>
+                <li><a href="/contact-manager">Contact manager</a></li>
+                <li><a href="/about">About us</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="dashboard-content">
+        <div class="sidebar">
+            <div class="user-info">
+                <h3>Welcome, {{.Username}}</h3>
+                <p>Operator Dashboard</p>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active"><a href="#book-ticket">Book ticket</a></li>
+                <li><a href="#cancel-ticket">Cancel ticket</a></li>
+                <li><a href="#manage-trip">Manage trip and schedule</a></li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            {{if .Success}}
+            <div class="alert alert-success">{{.Success}}</div>
+            {{end}}
+            
+            {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+            {{end}}
+
+            <div class="content-section active" id="book-ticket-section">
+                <div class="card">
+                    <h2>Book New Ticket</h2>
+                    <form class="booking-form">
+                        <div class="form-group">
+                            <label for="passenger-name">Passenger Name</label>
+                            <input type="text" id="passenger-name" name="passenger-name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="social-id">Social ID</label>
+                            <input type="text" id="social-id" name="social-id" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="phone-number">Phone Number</label>
+                            <input type="tel" id="phone-number" name="phone-number" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="date-of-birth">Date of Birth</label>
+                            <input type="date" id="date-of-birth" name="date-of-birth" required>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="from-location">From</label>
+                                <select id="from-location" name="from-location" required>
+                                    <option value="">Select Origin</option>
+                                    <option value="new-york">New York</option>
+                                    <option value="london">London</option>
+                                    <option value="tokyo">Tokyo</option>
+                                    <option value="paris">Paris</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="to-location">To</label>
+                                <select id="to-location" name="to-location" required>
+                                    <option value="">Select Destination</option>
+                                    <option value="new-york">New York</option>
+                                    <option value="london">London</option>
+                                    <option value="tokyo">Tokyo</option>
+                                    <option value="paris">Paris</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="departure-date">Departure Date</label>
+                                <input type="date" id="departure-date" name="departure-date" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="return-date">Return Date (Optional)</label>
+                                <input type="date" id="return-date" name="return-date">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="ticket-type">Ticket Type</label>
+                            <select id="ticket-type" name="ticket-type" required>
+                                <option value="economy">Economy</option>
+                                <option value="business">Business</option>
+                                <option value="first">First Class</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="passengers">Number of Passengers</label>
+                            <input type="number" id="passengers" name="passengers" min="1" max="10" value="1" required>
+                        </div>
+                        
+                        <button type="submit" class="btn-primary">Book Ticket</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="content-section" id="cancel-ticket-section">
+                <div class="card">
+                    <h2>Cancel Existing Ticket</h2>
+                    <form class="cancel-form">
+                        <div class="form-group">
+                            <label for="ticket-id">Ticket ID</label>
+                            <input type="text" id="ticket-id" name="ticket-id" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="passenger-email">Passenger Email</label>
+                            <input type="email" id="passenger-email" name="passenger-email" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cancellation-reason">Reason for Cancellation</label>
+                            <select id="cancellation-reason" name="cancellation-reason" required>
+                                <option value="">Select Reason</option>
+                                <option value="change-plans">Change of Plans</option>
+                                <option value="emergency">Emergency</option>
+                                <option value="better-option">Found Better Option</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn-warning">Cancel Ticket</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="content-section" id="manage-trip-section">
+                <div class="card">
+                    <h2>Manage Trip and Schedule</h2>
+                    <div class="schedules-table">
+                        <h3>Upcoming Trips</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Trip ID</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>TRP10023</td>
+                                    <td>New York</td>
+                                    <td>London</td>
+                                    <td>2023-06-15</td>
+                                    <td>Scheduled</td>
+                                    <td>
+                                        <button class="btn-small">Edit</button>
+                                        <button class="btn-small btn-warning">Cancel</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>TRP10024</td>
+                                    <td>Paris</td>
+                                    <td>Tokyo</td>
+                                    <td>2023-06-18</td>
+                                    <td>Confirmed</td>
+                                    <td>
+                                        <button class="btn-small">Edit</button>
+                                        <button class="btn-small btn-warning">Cancel</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>TRP10025</td>
+                                    <td>London</td>
+                                    <td>New York</td>
+                                    <td>2023-06-20</td>
+                                    <td>Pending</td>
+                                    <td>
+                                        <button class="btn-small">Edit</button>
+                                        <button class="btn-small btn-warning">Cancel</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-container {
+        width: 100%;
+        min-height: 100vh;
+        background-color: #f7f9fc;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        background-color: #fff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .logo h1 {
+        font-size: 2rem;
+        margin: 0;
+        color: #333;
+    }
+
+    .logo p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #666;
+    }
+
+    .main-nav ul {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .main-nav li {
+        margin: 0 1rem;
+    }
+
+    .main-nav a {
+        text-decoration: none;
+        color: #666;
+        font-weight: 500;
+        padding: 0.5rem;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .main-nav li.active a,
+    .main-nav a:hover {
+        color: #3498db;
+        background-color: rgba(52, 152, 219, 0.1);
+    }
+
+    .dashboard-content {
+        display: flex;
+        padding: 2rem;
+    }
+
+    .sidebar {
+        width: 250px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-right: 2rem;
+    }
+
+    .user-info {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .user-info h3 {
+        margin: 0 0 0.5rem 0;
+        color: #333;
+    }
+
+    .user-info p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .sidebar-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .sidebar-menu li {
+        margin-bottom: 0.5rem;
+    }
+
+    .sidebar-menu a {
+        display: block;
+        padding: 0.75rem 1rem;
+        text-decoration: none;
+        color: #666;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .sidebar-menu li.active a,
+    .sidebar-menu a:hover {
+        color: #3498db;
+        background-color: rgba(52, 152, 219, 0.1);
+    }
+
+    .main-content {
+        flex: 1;
+    }
+
+    .card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .card h2 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        color: #333;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1.5rem;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 1.5rem;
+    }
+
+    .form-row .form-group {
+        flex: 1;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #333;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="date"],
+    input[type="number"],
+    select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+
+    .btn-primary,
+    .btn-warning,
+    .btn-small {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background-color: #3498db;
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background-color: #2980b9;
+    }
+
+    .btn-warning {
+        background-color: #e74c3c;
+        color: #fff;
+    }
+
+    .btn-warning:hover {
+        background-color: #c0392b;
+    }
+
+    .btn-small {
+        padding: 0.3rem 0.75rem;
+        font-size: 0.85rem;
+        background-color: #3498db;
+        color: #fff;
+    }
+
+    .btn-small.btn-warning {
+        background-color: #e74c3c;
+    }
+
+    .content-section {
+        display: none;
+    }
+
+    .content-section.active {
+        display: block;
+    }
+
+    .schedules-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .schedules-table th, 
+    .schedules-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .schedules-table th {
+        font-weight: 600;
+        color: #333;
+        background-color: #f9f9f9;
+    }
+
+    .schedules-table td button {
+        margin-right: 0.5rem;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab navigation for sidebar
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
+        const contentSections = document.querySelectorAll('.content-section');
+
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all links and sections
+                sidebarLinks.forEach(l => l.parentElement.classList.remove('active'));
+                contentSections.forEach(section => section.classList.remove('active'));
+                
+                // Add active class to clicked link
+                this.parentElement.classList.add('active');
+                
+                // Show corresponding section
+                const targetId = this.getAttribute('href').substring(1) + '-section';
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
+
+        // Form submissions
+        const bookingForm = document.querySelector('.booking-form');
+        if (bookingForm) {
+            // Load trip options when the page loads
+            async function loadTripOptions() {
+                const fromSelect = document.getElementById('from-location');
+                const toSelect = document.getElementById('to-location');
+                
+                try {
+                    // Fetch available trips from the server
+                    const response = await fetch('/admin/trips');
+                    const trips = await response.json();
+                    
+                    // Get unique origins and destinations
+                    const origins = [...new Set(trips.map(trip => trip.origin))];
+                    const destinations = [...new Set(trips.map(trip => trip.destination))];
+                    
+                    // Clear existing options except the first one
+                    while (fromSelect.options.length > 1) fromSelect.remove(1);
+                    while (toSelect.options.length > 1) toSelect.remove(1);
+                    
+                    // Add origins
+                    origins.forEach(origin => {
+                        const option = document.createElement('option');
+                        option.value = origin;
+                        option.textContent = origin;
+                        fromSelect.appendChild(option);
+                    });
+                    
+                    // Add destinations
+                    destinations.forEach(destination => {
+                        const option = document.createElement('option');
+                        option.value = destination;
+                        option.textContent = destination;
+                        toSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error loading trip options:', error);
+                }
+            }
+            
+            // Load trip options when the page loads
+            loadTripOptions();
+            
+            bookingForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const fromLocation = document.getElementById('from-location').value;
+                const toLocation = document.getElementById('to-location').value;
+                
+                try {
+                    // Get trip ID based on route
+                    const tripResponse = await fetch(`/operator/trips?origin=${fromLocation}&destination=${toLocation}`);
+                    const tripData = await tripResponse.json();
+                    
+                    if (!tripData.trip_id) {
+                        alert('No trip found for this route. Please select a different route.');
+                        return;
+                    }
+                    
+                    // Submit booking
+                    const response = await fetch('/operator/bookings/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            trip_id: tripData.trip_id,
+                            passenger: document.getElementById('passenger-name').value,
+                            social_id: document.getElementById('social-id').value,
+                            phone_number: document.getElementById('phone-number').value,
+                            date_of_birth: document.getElementById('date-of-birth').value,
+                            status: 'Confirmed'
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert('Booking created successfully!');
+                        bookingForm.reset();
+                    } else {
+                        alert('Error: ' + (result.error || 'Failed to create booking'));
+                    }
+                } catch (error) {
+                    console.error('Error creating booking:', error);
+                    alert('Failed to create booking. Please try again.');
+                }
+            });
+        }
+
+        const cancelForm = document.querySelector('.cancel-form');
+        if (cancelForm) {
+            cancelForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('Cancellation functionality will be implemented soon!');
+            });
+        }
+    });
+</script>
+{{end}} 

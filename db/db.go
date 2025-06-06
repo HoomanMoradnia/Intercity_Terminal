@@ -11,6 +11,7 @@ import (
 	"SecureSignIn/utils"
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
+	"golang.org/x/crypto/bcrypt"
 )
 
 var DB *sql.DB
@@ -113,6 +114,12 @@ func InitializeDB() error {
 		return fmt.Errorf("failed to initialize database schema: %w", err)
 	}
 
+	// Apply any schema migrations
+	if err = migrateSchema(); err != nil {
+		log.Printf("Warning: Schema migration failed: %v", err)
+		// Continue anyway, as the application might still work with the existing schema
+	}
+
 	// Verify that all expected tables and indexes exist
 	if err := utils.VerifyTableConsistency(DB); err != nil {
 		log.Printf("Warning: Table consistency check failed: %v", err)
@@ -134,12 +141,32 @@ func initializeSchema() error {
 		password TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		date_of_birth TEXT,
-		social_security TEXT
+		social_security TEXT,
+		role TEXT DEFAULT 'Operator'
 	);
 	`
 	_, err := DB.Exec(usersTableSQL)
 	if err != nil {
 		return fmt.Errorf("failed to create users table: %w", err)
+	}
+
+	// Create vehicles table
+	vehiclesTableSQL := `
+	CREATE TABLE IF NOT EXISTS vehicles (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		vehicle_number TEXT UNIQUE NOT NULL,
+		type TEXT NOT NULL,
+		capacity INTEGER NOT NULL,
+		status TEXT NOT NULL,
+		last_maintenance_date TEXT,
+		next_maintenance_date TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		notes TEXT
+	);
+	`
+	_, err = DB.Exec(vehiclesTableSQL)
+	if err != nil {
+		return fmt.Errorf("failed to create vehicles table: %w", err)
 	}
 
 	// Create login_history table if it doesn't exist
@@ -204,6 +231,43 @@ func initializeSchema() error {
 		return fmt.Errorf("failed to migrate database schema: %w", err)
 	}
 
+	// Create trips table
+	tripsTableSQL := `
+	CREATE TABLE IF NOT EXISTS trips (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		origin TEXT NOT NULL,
+		destination TEXT NOT NULL,
+		vehicle_id INTEGER NOT NULL,
+		departure_time TEXT NOT NULL,
+		arrival_time TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE SET NULL
+	);
+	`
+	_, err = DB.Exec(tripsTableSQL)
+	if err != nil {
+		return fmt.Errorf("failed to create trips table: %w", err)
+	}
+
+	// Create bookings table
+	bookingsTableSQL := `
+	CREATE TABLE IF NOT EXISTS bookings (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		trip_id INTEGER NOT NULL,
+		passenger TEXT NOT NULL,
+		social_id TEXT NOT NULL,
+		phone_number TEXT NOT NULL,
+		date_of_birth TEXT NOT NULL,
+		booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		status TEXT NOT NULL,
+		FOREIGN KEY(trip_id) REFERENCES trips(id) ON DELETE CASCADE
+	);
+	`
+	_, err = DB.Exec(bookingsTableSQL)
+	if err != nil {
+		return fmt.Errorf("failed to create bookings table: %w", err)
+	}
+
 	return nil
 }
 
@@ -229,6 +293,37 @@ func migrateSchema() error {
 		log.Println("Email column added successfully")
 	} else {
 		log.Println("Email column already exists in users table")
+	}
+
+	// Check if vehicles table exists
+	var vehiclesTableExists int
+	err = DB.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='vehicles'`).Scan(&vehiclesTableExists)
+	if err != nil {
+		return fmt.Errorf("failed to check if vehicles table exists: %w", err)
+	}
+
+	if vehiclesTableExists == 0 {
+		log.Println("Creating vehicles table...")
+		vehiclesTableSQL := `
+		CREATE TABLE IF NOT EXISTS vehicles (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			vehicle_number TEXT UNIQUE NOT NULL,
+			type TEXT NOT NULL,
+			capacity INTEGER NOT NULL,
+			status TEXT NOT NULL,
+			last_maintenance_date TEXT,
+			next_maintenance_date TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			notes TEXT
+		);
+		`
+		_, err := DB.Exec(vehiclesTableSQL)
+		if err != nil {
+			return fmt.Errorf("failed to create vehicles table: %w", err)
+		}
+		log.Println("vehicles table created successfully")
+	} else {
+		log.Println("vehicles table already exists")
 	}
 
 	// Check if security_questions table exists
@@ -259,86 +354,107 @@ func migrateSchema() error {
 		log.Println("security_questions table already exists")
 	}
 
+	// Check if the role column exists in the users table
+	var roleExists int
+	err = DB.QueryRow("SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='role'").Scan(&roleExists)
+	if err != nil {
+		return fmt.Errorf("failed to check if role column exists: %w", err)
+	}
+
+	// If role column does not exist, add it
+	if roleExists == 0 {
+		log.Println("Adding 'role' column to users table...")
+		_, err = DB.Exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'Operator'")
+		if err != nil {
+			return fmt.Errorf("failed to add role column: %w", err)
+		}
+		log.Println("Added 'role' column to users table")
+	}
+
 	return nil
 }
 
-// AddUser inserts a new user into the database (SQLite).
-func AddUser(username, passwordHash, dob, ssn string, email string) (int64, error) {
-	// Validate required fields
+// AddUser creates a new user record in the database
+func AddUser(username, passwordHash, dob, ssn string, email string, role string) (int64, error) {
+	// Validate inputs (basic check)
 	if username == "" || passwordHash == "" || email == "" {
-		return 0, fmt.Errorf("username, password, and email are required fields")
+		return 0, fmt.Errorf("username, password, and email are required")
 	}
 
-	// Check if email column exists
-	var count int
-	err := DB.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='email'`).Scan(&count)
+	// If role is empty, default to Operator
+	if role == "" {
+		role = "Operator"
+	}
+
+	// Prepare the SQL statement for inserting a new user
+	stmt, err := DB.Prepare(`
+		INSERT INTO users (username, password, date_of_birth, social_security, email, role)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`)
 	if err != nil {
-		return 0, fmt.Errorf("failed to check if email column exists: %w", err)
+		return 0, fmt.Errorf("failed to prepare statement: %w", err)
 	}
+	defer stmt.Close()
 
-	var result sql.Result
-	if count > 0 {
-		// Table has email column
-		query := "INSERT INTO users (username, password, date_of_birth, social_security, email) VALUES (?, ?, ?, ?, ?)"
-		result, err = DB.Exec(query, username, passwordHash, dob, ssn, email)
-	} else {
-		// Fall back to original schema without email
-		query := "INSERT INTO users (username, password, date_of_birth, social_security) VALUES (?, ?, ?, ?)"
-		result, err = DB.Exec(query, username, passwordHash, dob, ssn)
-		log.Printf("Warning: User created without email because email column doesn't exist")
-	}
-
+	// Execute the statement with the provided values
+	result, err := stmt.Exec(username, passwordHash, dob, ssn, email, role)
 	if err != nil {
-		return 0, fmt.Errorf("error inserting user (sqlite): %w", err)
+		return 0, fmt.Errorf("failed to insert user: %w", err)
 	}
 
+	// Get the ID of the inserted user
 	userID, err := result.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("error getting last insert ID: %w", err)
+		return 0, fmt.Errorf("failed to get last insert ID: %w", err)
 	}
 
 	return userID, nil
 }
 
-// GetUserByUsername retrieves a user by their username (SQLite).
+// GetUserByUsername retrieves a user by username.
 func GetUserByUsername(username string) (*sql.Row, error) {
-	// Check if email column exists
+	// First check if the username exists
 	var count int
-	err := DB.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='email'`).Scan(&count)
+	err := DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", username).Scan(&count)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check if email column exists: %w", err)
-	}
-
-	var row *sql.Row
-	if count > 0 {
-		// Table has email column
-		query := "SELECT id, username, date_of_birth, social_security, password, email FROM users WHERE username = ?"
-		row = DB.QueryRow(query, username)
-	} else {
-		// Fall back to original schema without email
-		query := "SELECT id, username, date_of_birth, social_security, password, '' as email FROM users WHERE username = ?"
-		row = DB.QueryRow(query, username)
-	}
-
-	return row, nil // Error checking deferred to Scan
-}
-
-// GetUserByEmail retrieves a user by their email.
-func GetUserByEmail(email string) (*sql.Row, error) {
-	// Check if email column exists
-	var count int
-	err := DB.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='email'`).Scan(&count)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if email column exists: %w", err)
+		return nil, fmt.Errorf("error checking if username exists: %w", err)
 	}
 
 	if count == 0 {
-		// Email column doesn't exist
-		return nil, fmt.Errorf("email column does not exist in users table")
+		// Return empty row, which will result in sql.ErrNoRows when scanned
+		return DB.QueryRow("SELECT 1 WHERE 1=0"), nil
 	}
 
-	// Return the same structure as GetUserByUsername for consistency
-	query := "SELECT id, username, date_of_birth, social_security, password, email FROM users WHERE email = ?"
+	// Get user details including role
+	query := `
+		SELECT id, username, date_of_birth, social_security, password, email, COALESCE(role, 'Operator') as role
+		FROM users
+		WHERE username = ?
+	`
+	row := DB.QueryRow(query, username)
+	return row, nil
+}
+
+// GetUserByEmail retrieves a user by email.
+func GetUserByEmail(email string) (*sql.Row, error) {
+	// First check if the email exists
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", email).Scan(&count)
+	if err != nil {
+		return nil, fmt.Errorf("error checking if email exists: %w", err)
+	}
+
+	if count == 0 {
+		// Return empty row, which will result in sql.ErrNoRows when scanned
+		return DB.QueryRow("SELECT 1 WHERE 1=0"), nil
+	}
+
+	// Get user details including role
+	query := `
+		SELECT id, username, date_of_birth, social_security, password, email, COALESCE(role, 'Operator') as role
+		FROM users
+		WHERE email = ?
+	`
 	row := DB.QueryRow(query, email)
 	return row, nil
 }
@@ -356,6 +472,28 @@ func UpdateUserPassword(userID int, newPasswordHash string) error {
 	_, err := DB.Exec(query, newPasswordHash, userID)
 	if err != nil {
 		return fmt.Errorf("error updating password for user ID %d: %w", userID, err)
+	}
+	return nil
+}
+
+// UpdateUsername updates a user's username in the database.
+func UpdateUsername(userID int64, newUsername string) error {
+	// Check if username already exists
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ? AND id != ?", newUsername, userID).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("error checking if username exists: %w", err)
+	}
+	
+	if count > 0 {
+		return fmt.Errorf("username '%s' is already taken", newUsername)
+	}
+	
+	// Update the username
+	query := "UPDATE users SET username = ? WHERE id = ?"
+	_, err = DB.Exec(query, newUsername, userID)
+	if err != nil {
+		return fmt.Errorf("error updating username for user ID %d: %w", userID, err)
 	}
 	return nil
 }
@@ -378,7 +516,7 @@ func LogLoginAttempt(userID int64, ipAddress string, success bool) error {
 
 // GetAllUsers retrieves all users (SQLite).
 func GetAllUsers() (*sql.Rows, error) {
-	rows, err := DB.Query("SELECT id, username, created_at FROM users ORDER BY username")
+	rows, err := DB.Query("SELECT id, username, email, password, created_at, date_of_birth, social_security, role FROM users ORDER BY username")
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving all users: %w", err)
 	}
@@ -523,4 +661,593 @@ func DeleteSecurityQuestions(userID int64) error {
 		return fmt.Errorf("error deleting security questions for user ID %d: %w", userID, err)
 	}
 	return nil
+}
+
+// EnsureAdminUser creates a default admin user if no admin exists
+func EnsureAdminUser() error {
+	// Check if an admin user already exists
+	query := "SELECT COUNT(*) FROM users WHERE role = 'Admin'"
+	var count int
+	err := DB.QueryRow(query).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("error checking for admin users: %w", err)
+	}
+
+	// If no admin users exist, create one
+	if count == 0 {
+		log.Println("No admin users found. Creating default admin user...")
+		
+		// Hash the default password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("error hashing default admin password: %w", err)
+		}
+		
+		// Insert the admin user
+		_, err = AddUser("admin", string(hashedPassword), "", "", "admin@example.com", "Admin")
+		if err != nil {
+			return fmt.Errorf("error creating default admin user: %w", err)
+		}
+		
+		log.Println("Default admin user created successfully. Username: admin, Password: admin")
+	}
+	
+	return nil
+}
+
+// UpdateUserRole updates a user's role in the database.
+func UpdateUserRole(userID int64, newRole string) error {
+	query := "UPDATE users SET role = ? WHERE id = ?"
+	_, err := DB.Exec(query, newRole, userID)
+	if err != nil {
+		return fmt.Errorf("error updating role for user ID %d: %w", userID, err)
+	}
+	return nil
+}
+
+// DeleteUser deletes a user from the database.
+func DeleteUser(userID int64) error {
+	query := "DELETE FROM users WHERE id = ?"
+	_, err := DB.Exec(query, userID)
+	if err != nil {
+		return fmt.Errorf("error deleting user ID %d: %w", userID, err)
+	}
+	return nil
+}
+
+// --- Vehicle Functions ---
+
+// AddVehicle adds a new vehicle to the database
+func AddVehicle(vehicleNumber, vehicleType string, capacity int, status, lastMaintenance, nextMaintenance, notes string) (int64, error) {
+	// Validate inputs (basic check)
+	if vehicleNumber == "" || vehicleType == "" || status == "" {
+		return 0, fmt.Errorf("vehicle number, type, and status are required")
+	}
+
+	// Prepare the SQL statement for inserting a new vehicle
+	stmt, err := DB.Prepare(`
+		INSERT INTO vehicles (vehicle_number, type, capacity, status, last_maintenance_date, next_maintenance_date, notes)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	// Execute the statement with the provided values
+	result, err := stmt.Exec(vehicleNumber, vehicleType, capacity, status, lastMaintenance, nextMaintenance, notes)
+	if err != nil {
+		return 0, fmt.Errorf("failed to insert vehicle: %w", err)
+	}
+
+	// Get the ID of the inserted vehicle
+	vehicleID, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get last insert ID: %w", err)
+	}
+
+	return vehicleID, nil
+}
+
+// GetAllVehicles retrieves all vehicles from the database
+func GetAllVehicles() (*sql.Rows, error) {
+	rows, err := DB.Query(`
+		SELECT id, vehicle_number, type, capacity, status, 
+			   last_maintenance_date, next_maintenance_date, created_at, notes 
+		FROM vehicles 
+		ORDER BY vehicle_number
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving all vehicles: %w", err)
+	}
+	return rows, nil
+}
+
+// GetAvailableVehicles retrieves vehicles that are not under repair, not scheduled for maintenance during the given time range, and not assigned to overlapping trips
+func GetAvailableVehicles(departureTime, arrivalTime string) (*sql.Rows, error) {
+	query := `
+		SELECT id, vehicle_number, type, capacity, status,
+		       last_maintenance_date, next_maintenance_date, created_at, notes
+		FROM vehicles
+		WHERE status != 'Under repair'
+		  AND (next_maintenance_date IS NULL OR next_maintenance_date < ? OR next_maintenance_date > ?)
+		  AND id NOT IN (
+			SELECT vehicle_id FROM trips
+			WHERE departure_time < ? AND arrival_time > ?
+		  )
+		ORDER BY vehicle_number
+	`
+	// Parameter order: maintenance before, maintenance after, new_arrival, new_departure
+	rows, err := DB.Query(query, departureTime, arrivalTime, arrivalTime, departureTime)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving available vehicles: %w", err)
+	}
+	return rows, nil
+}
+
+// GetVehicleByID retrieves a vehicle by its ID
+func GetVehicleByID(vehicleID int64) (*sql.Row, error) {
+	query := `
+		SELECT id, vehicle_number, type, capacity, status, 
+			   last_maintenance_date, next_maintenance_date, created_at, notes 
+		FROM vehicles 
+		WHERE id = ?
+	`
+	row := DB.QueryRow(query, vehicleID)
+	return row, nil
+}
+
+// UpdateVehicle updates a vehicle's information in the database
+func UpdateVehicle(vehicleID int64, vehicleNumber, vehicleType string, capacity int, 
+				  status, lastMaintenance, nextMaintenance, notes string) error {
+	// Validate inputs
+	if vehicleNumber == "" || vehicleType == "" || status == "" {
+		return fmt.Errorf("vehicle number, type, and status are required")
+	}
+
+	// Check if vehicle number already exists for a different vehicle
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM vehicles WHERE vehicle_number = ? AND id != ?", 
+					  vehicleNumber, vehicleID).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("error checking if vehicle number exists: %w", err)
+	}
+	
+	if count > 0 {
+		return fmt.Errorf("vehicle number '%s' is already in use", vehicleNumber)
+	}
+
+	query := `
+		UPDATE vehicles 
+		SET vehicle_number = ?, 
+			type = ?, 
+			capacity = ?, 
+			status = ?, 
+			last_maintenance_date = ?, 
+			next_maintenance_date = ?, 
+			notes = ? 
+		WHERE id = ?
+	`
+	_, err = DB.Exec(query, vehicleNumber, vehicleType, capacity, status, 
+					lastMaintenance, nextMaintenance, notes, vehicleID)
+	if err != nil {
+		return fmt.Errorf("error updating vehicle with ID %d: %w", vehicleID, err)
+	}
+	return nil
+}
+
+// DeleteVehicle deletes a vehicle from the database
+func DeleteVehicle(vehicleID int64) error {
+	query := "DELETE FROM vehicles WHERE id = ?"
+	_, err := DB.Exec(query, vehicleID)
+	if err != nil {
+		return fmt.Errorf("error deleting vehicle with ID %d: %w", vehicleID, err)
+	}
+	return nil
+}
+
+// --- Trip Functions ---
+
+// AddTrip adds a new trip to the database
+func AddTrip(origin, destination string, vehicleID int64, departureTime, arrivalTime string) (int64, error) {
+	// Validate departure before arrival
+	if departureTime >= arrivalTime {
+		return 0, fmt.Errorf("departure time must be before arrival time")
+	}
+	
+	// Validate origin and destination are different
+	if origin == destination {
+		return 0, fmt.Errorf("origin and destination cannot be the same city")
+	}
+	
+	stmt, err := DB.Prepare(`
+		INSERT INTO trips (origin, destination, vehicle_id, departure_time, arrival_time)
+		VALUES (?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("failed to prepare trip insert: %w", err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(origin, destination, vehicleID, departureTime, arrivalTime)
+	if err != nil {
+		return 0, fmt.Errorf("failed to insert trip: %w", err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("failed to retrieve trip id: %w", err)
+	}
+	return id, nil
+}
+
+// GetAllTrips retrieves all trips
+func GetAllTrips() (*sql.Rows, error) {
+	rows, err := DB.Query(`
+		SELECT t.id, t.origin, t.destination, t.vehicle_id, t.departure_time, t.arrival_time, t.created_at, v.vehicle_number
+		FROM trips t
+		LEFT JOIN vehicles v ON t.vehicle_id = v.id
+		ORDER BY t.departure_time DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving trips: %w", err)
+	}
+	return rows, nil
+}
+
+// UpdateTrip updates trip details
+func UpdateTrip(id int64, origin, destination string, vehicleID int64, departureTime, arrivalTime string) error {
+	// Validate departure before arrival
+	if departureTime >= arrivalTime {
+		return fmt.Errorf("departure time must be before arrival time")
+	}
+	
+	// Validate origin and destination are different
+	if origin == destination {
+		return fmt.Errorf("origin and destination cannot be the same city")
+	}
+	
+	stmt, err := DB.Prepare(`
+		UPDATE trips SET origin=?, destination=?, vehicle_id=?, departure_time=?, arrival_time=? WHERE id=?
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare trip update: %w", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(origin, destination, vehicleID, departureTime, arrivalTime, id)
+	if err != nil {
+		return fmt.Errorf("failed to update trip: %w", err)
+	}
+	return nil
+}
+
+// DeleteTrip deletes a trip by ID
+func DeleteTrip(id int64) error {
+	_, err := DB.Exec("DELETE FROM trips WHERE id=?", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete trip: %w", err)
+	}
+	return nil
+}
+
+// AddBooking adds a new booking to the database
+func AddBooking(tripID int64, passenger, socialID, phoneNumber, dateOfBirth, status string) (int64, error) {
+	// Validate inputs
+	if tripID == 0 || passenger == "" || status == "" {
+		return 0, fmt.Errorf("trip ID, passenger name, and status are required")
+	}
+	
+	// Prepare insert
+	stmt, err := DB.Prepare("INSERT INTO bookings (trip_id, passenger, social_id, phone_number, date_of_birth, status) VALUES (?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		return 0, fmt.Errorf("failed to prepare booking insert: %w", err)
+	}
+	defer stmt.Close()
+
+	// Execute insert
+	res, err := stmt.Exec(tripID, passenger, socialID, phoneNumber, dateOfBirth, status)
+	if err != nil {
+		return 0, fmt.Errorf("failed to insert booking: %w", err)
+	}
+
+	// Get new ID
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("failed to retrieve booking id: %w", err)
+	}
+	return id, nil
+}
+
+// GetAllBookings retrieves all bookings
+func GetAllBookings() (*sql.Rows, error) {
+	return GetFilteredBookings(nil, "", "")
+}
+
+// UpdateBookingStatus updates the status of a booking
+func UpdateBookingStatus(bookingID int64, status string) error {
+	_, err := DB.Exec("UPDATE bookings SET status = ? WHERE id = ?", status, bookingID)
+	if err != nil {
+		return fmt.Errorf("error updating booking status: %w", err)
+	}
+	return nil
+}
+
+// DeleteBooking deletes a booking
+func DeleteBooking(bookingID int64) error {
+	_, err := DB.Exec("DELETE FROM bookings WHERE id = ?", bookingID)
+	if err != nil {
+		return fmt.Errorf("error deleting booking: %w", err)
+	}
+	return nil
+}
+
+// FindTripByRoute finds a trip by origin and destination
+func FindTripByRoute(origin, destination string) (int64, error) {
+	var tripID int64
+	err := DB.QueryRow("SELECT id FROM trips WHERE origin = ? AND destination = ? ORDER BY departure_time LIMIT 1", origin, destination).Scan(&tripID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("no trip found for route %s to %s", origin, destination)
+		}
+		return 0, fmt.Errorf("error finding trip: %w", err)
+	}
+	return tripID, nil
+}
+
+// GetFilteredBookings retrieves bookings with optional filtering and ordering
+func GetFilteredBookings(filter map[string]string, orderBy string, orderDir string) (*sql.Rows, error) {
+	query := `SELECT b.id, b.trip_id, b.passenger, b.social_id, b.phone_number, b.date_of_birth, b.booking_date, b.status, t.origin, t.destination, t.departure_time
+	FROM bookings b
+	JOIN trips t ON b.trip_id = t.id
+	WHERE 1=1`
+	
+	var args []interface{}
+	
+	// Add filters
+	if filter != nil {
+		if v, ok := filter["passenger"]; ok && v != "" {
+			query += " AND b.passenger LIKE ?"
+			args = append(args, "%"+v+"%")
+		}
+		if v, ok := filter["origin"]; ok && v != "" {
+			query += " AND t.origin = ?"
+			args = append(args, v)
+		}
+		if v, ok := filter["destination"]; ok && v != "" {
+			query += " AND t.destination = ?"
+			args = append(args, v)
+		}
+		if v, ok := filter["status"]; ok && v != "" {
+			query += " AND b.status = ?"
+			args = append(args, v)
+		}
+		// Date range filters
+		if v, ok := filter["date_from"]; ok && v != "" {
+			query += " AND DATE(b.booking_date) >= ?"
+			args = append(args, v)
+		}
+		if v, ok := filter["date_to"]; ok && v != "" {
+			query += " AND DATE(b.booking_date) <= ?"
+			args = append(args, v)
+		}
+	}
+	
+	// Add ordering
+	if orderBy != "" {
+		validColumns := map[string]string{
+			"passenger": "b.passenger",
+			"date": "b.booking_date",
+			"status": "b.status",
+			"origin": "t.origin",
+			"destination": "t.destination",
+		}
+		
+		if col, ok := validColumns[orderBy]; ok {
+			query += " ORDER BY " + col
+			if orderDir == "desc" {
+				query += " DESC"
+			} else {
+				query += " ASC"
+			}
+		} else {
+			query += " ORDER BY b.booking_date DESC"
+		}
+	} else {
+		query += " ORDER BY b.booking_date DESC"
+	}
+	
+	// Execute query
+	rows, err := DB.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving bookings: %w", err)
+	}
+	return rows, nil
+}
+
+// IsVehicleAvailableForTripEdit checks whether a vehicle is free for a given time range excluding a specific trip
+func IsVehicleAvailableForTripEdit(vehicleID int64, departureTime, arrivalTime string, tripID int64) (bool, error) {
+	var count int
+	query := `
+		SELECT COUNT(*) FROM vehicles v
+		WHERE v.id = ?
+		  AND v.status != 'Under repair'
+		  AND (v.next_maintenance_date IS NULL OR v.next_maintenance_date < ? OR v.next_maintenance_date > ?)
+		  AND NOT EXISTS (
+			SELECT 1 FROM trips t
+			WHERE t.vehicle_id = v.id
+			  AND t.departure_time < ?
+			  AND t.arrival_time > ?
+			  AND t.id != ?
+		  )`
+	// Parameter order: vehicle, maintenance before, maintenance after, new_arrival, new_departure, exclude trip
+	err := DB.QueryRow(query, vehicleID, departureTime, arrivalTime, arrivalTime, departureTime, tripID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("error checking vehicle availability: %w", err)
+	}
+	return count > 0, nil
+}
+
+// GetTripVehicleCapacity retrieves the capacity of a vehicle assigned to a trip
+func GetTripVehicleCapacity(tripID int64) (int, error) {
+	var capacity int
+	err := DB.QueryRow(`
+		SELECT v.capacity 
+		FROM trips t
+		JOIN vehicles v ON t.vehicle_id = v.id
+		WHERE t.id = ?
+	`, tripID).Scan(&capacity)
+	
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("trip not found")
+		}
+		return 0, fmt.Errorf("error getting trip vehicle capacity: %w", err)
+	}
+	
+	return capacity, nil
+}
+
+// GetTripBookingsCount retrieves the number of active bookings for a trip
+func GetTripBookingsCount(tripID int64) (int, error) {
+	var count int
+	err := DB.QueryRow(`
+		SELECT COUNT(*) 
+		FROM bookings 
+		WHERE trip_id = ? AND status != 'Cancelled'
+	`, tripID).Scan(&count)
+	
+	if err != nil {
+		return 0, fmt.Errorf("error getting trip bookings count: %w", err)
+	}
+	
+	return count, nil
+}
+
+// GetVehicleBookingsCount retrieves the number of active bookings for all trips using a specific vehicle
+func GetVehicleBookingsCount(vehicleID int64) (int, error) {
+	var count int
+	err := DB.QueryRow(`
+		SELECT COUNT(*)
+		FROM bookings b
+		JOIN trips t ON b.trip_id = t.id
+		WHERE t.vehicle_id = ? AND b.status != 'Cancelled'
+	`, vehicleID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("error getting vehicle bookings count: %w", err)
+	}
+	return count, nil
+}
+
+// CheckTripAvailability verifies if a trip has available seats
+func CheckTripAvailability(tripID int64) (bool, error) {
+	capacity, err := GetTripVehicleCapacity(tripID)
+	if err != nil {
+		return false, err
+	}
+	
+	bookingsCount, err := GetTripBookingsCount(tripID)
+	if err != nil {
+		return false, err
+	}
+	
+	return bookingsCount < capacity, nil
+}
+
+// GetBookingSummary returns the count of bookings per day within a date range
+func GetBookingSummary(from, to string) ([]map[string]interface{}, error) {
+	query := `
+	SELECT DATE(booking_date) AS date, COUNT(*) AS bookings
+	FROM bookings
+	WHERE DATE(booking_date) >= ? AND DATE(booking_date) <= ?
+	GROUP BY DATE(booking_date)
+	ORDER BY DATE(booking_date)
+	`
+	rows, err := DB.Query(query, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("error getting booking summary: %w", err)
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var date string
+		var count int
+		if err := rows.Scan(&date, &count); err != nil {
+			log.Printf("Error scanning booking summary row: %v", err)
+			continue
+		}
+		results = append(results, map[string]interface{}{"date": date, "bookings": count})
+	}
+	return results, nil
+}
+
+// GetCancellationSummary returns daily bookings, cancellations, and cancellation rate within a date range
+func GetCancellationSummary(from, to string) ([]map[string]interface{}, error) {
+	query := `
+	SELECT DATE(booking_date) AS date,
+		   COUNT(*) AS bookings,
+		   SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancellations,
+		   ROUND(
+			 SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) * 100.0 / COUNT(*),
+			 2
+		   ) AS cancellation_rate
+	  FROM bookings
+	 WHERE DATE(booking_date) >= ?
+	   AND DATE(booking_date) <= ?
+	 GROUP BY DATE(booking_date)
+	 ORDER BY DATE(booking_date)
+	`
+	rows, err := DB.Query(query, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("error getting cancellation summary: %w", err)
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var date string
+		var total, cancels int
+		var rate float64
+		if err := rows.Scan(&date, &total, &cancels, &rate); err != nil {
+			log.Printf("Error scanning cancellation summary row: %v", err)
+			continue
+		}
+		results = append(results, map[string]interface{}{
+			"date":               date,
+			"bookings":           total,
+			"cancellations":      cancels,
+			"cancellation_rate":  rate,
+		})
+	}
+	return results, nil
+}
+
+// GetRoutePerformance returns booking counts per origin-destination within a date range
+func GetRoutePerformance(from, to string) ([]map[string]interface{}, error) {
+	query := `
+	SELECT t.origin, t.destination, COUNT(b.id) AS bookings
+	FROM bookings b
+	JOIN trips t ON b.trip_id = t.id
+	WHERE DATE(b.booking_date) >= ? AND DATE(b.booking_date) <= ?
+	GROUP BY t.origin, t.destination
+	ORDER BY bookings DESC
+	`
+	rows, err := DB.Query(query, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("error getting route performance: %w", err)
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var origin, destination string
+		var count int
+		if err := rows.Scan(&origin, &destination, &count); err != nil {
+			log.Printf("Error scanning route performance row: %v", err)
+			continue
+		}
+		results = append(results, map[string]interface{}{"origin": origin, "destination": destination, "bookings": count})
+	}
+	return results, nil
 }

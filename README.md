@@ -382,3 +382,69 @@ If you need to manually restore a backup:
 # Copy a backup to the main database location
 cp ~/.config/secure-sign-in-app/backups/backup-TIMESTAMP.db ~/.securesignin/securesignin.db
 ```
+
+# Project Setup and Testing
+
+This document provides instructions for setting up the project dependencies and running the tests.
+
+## Prerequisites
+
+- Go (version 1.x or higher)
+
+## Installation
+
+1.  **Clone the repository (if you haven't already):**
+    ```bash
+    git clone <your-repository-url>
+    cd <your-project-directory>
+    ```
+
+2.  **Install dependencies:**
+    The primary testing dependency is `testify`. To install it and other project dependencies, run:
+    ```bash
+    go get github.com/stretchr/testify
+    ```
+    If your project uses Go modules (which is standard), this command will also update your `go.mod` and `go.sum` files.
+    You can also run `go mod tidy` to ensure all dependencies are correctly managed:
+    ```bash
+    go mod tidy
+    ```
+
+## Running Tests
+
+### 1. Run All Tests in the Current Package (Verbose)
+
+To run all test functions within the current package (e.g., the package containing `handlers.go` and `handlers_test.go`) and see detailed output for each test (including passing ones), use the following command in your project's root directory:
+
+```bash
+go test -v
+```
+
+### 2. Run All Tests in the Entire Project (Verbose)
+
+To run all tests in all packages within your project (if you have multiple packages with tests), use:
+
+```bash
+go test -v ./...
+```
+
+### 3. Run a Single Specific Test Function (Verbose)
+
+To run a single, specific test function (e.g., `TestGenerateResetToken` from `handlers_test.go`), use the `-run` flag followed by a regular expression that matches the test function's name. The `^` and `$` anchors ensure an exact match.
+
+Example for running only `TestGenerateResetToken`:
+
+```bash
+go test -v -run ^TestGenerateResetToken$
+```
+
+Example for running only `TestStoreAndValidateResetToken`:
+
+```bash
+go test -v -run ^TestStoreAndValidateResetToken$
+```
+
+**Note:**
+
+*   Ensure you are in the root directory of your Go project when running these commands.
+*   The `-v` flag provides verbose output, showing the status of each test as it runs.

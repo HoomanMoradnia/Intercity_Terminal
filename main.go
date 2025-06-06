@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"SecureSignIn/db"
+	"SecureSignIn/routes"
 	"SecureSignIn/utils"
 
 	"github.com/labstack/echo/v4"
@@ -45,8 +46,6 @@ func main() {
 		}
 	})
 
-	e.Use(logAndRecover)
-
 	// Serve static files
 	e.Static("/static", "static")
 
@@ -68,6 +67,13 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	// Ensure admin user exists
+	if err := db.EnsureAdminUser(); err != nil {
+		log.Printf("Warning: Failed to ensure admin user exists: %v", err)
+	} else {
+		log.Println("Admin user check completed successfully")
+	}
+
 	// Set up a database backup on startup and daily backups
 	dbPath := os.Getenv("SQLITE_DB_PATH")
 	if dbPath == "" {
@@ -82,23 +88,8 @@ func main() {
 	// Schedule regular backups (every 24 hours)
 	utils.ScheduleBackups(dbPath, 24)
 
-	// Routes
-	e.GET("/", indexHandler)
-	e.GET("/dashboard", dashboardHandler)
-	e.GET("/login", loginHandler)
-	e.POST("/auth", basicAuthHandler)
-	e.GET("/forgot", forgotHandler)
-	e.POST("/forgot", forgotHandler)
-	e.GET("/reset/:token", showResetFormHandler)
-	e.POST("/reset/:token", handleResetPasswordHandler)
-	e.GET("/security-reset", securityQuestionResetHandler)
-	e.POST("/security-reset", securityQuestionResetHandler)
-	e.GET("/setup-security", setupSecurityQuestionHandler)
-	e.POST("/setup-security", setupSecurityQuestionHandler)
-	e.GET("/health", healthCheckHandler)
-	e.GET("/register", registerHandler)
-	e.POST("/register", basicRegisterHandler)
-	e.GET("/logout", logoutHandler)
+	// Register routes
+	routes.RegisterRoutes(e)
 
 	// Create custom server with timeouts
 	server := &http.Server{

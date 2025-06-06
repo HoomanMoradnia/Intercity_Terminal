@@ -1,0 +1,208 @@
+            <ul class="sidebar-menu">
+                <li class="active"><a href="#overview">System Overview</a></li>
+                <li><a href="#members">Manage Members</a></li>
+                <li><a href="#vehicles">Manage Vehicles</a></li>
+                <li><a href="#reports">Reports</a></li>
+                <li><a href="#backup">Backup</a></li>
+            </ul>
+
+            <div class="content-section" id="members-section">
+                <div class="card">
+                    <h2>Manage Members</h2>
+                    
+                    <div class="action-bar">
+                        <button class="btn-primary">Add New Member</button>
+                        <div class="search-box">
+                            <input type="text" placeholder="Search members...">
+                            <button class="btn-icon">🔍</button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Membership</th>
+                                    <th>Join Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>M10045</td>
+                                    <td>Alice Johnson</td>
+                                    <td>alice@example.com</td>
+                                    <td>Premium</td>
+                                    <td>2023-01-15</td>
+                                    <td><span class="status-active">Active</span></td>
+                                    <td>
+                                        <button class="btn-small">Edit</button>
+                                        <button class="btn-small btn-warning">Deactivate</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>M10046</td>
+                                    <td>Bob Smith</td>
+                                    <td>bob@example.com</td>
+                                    <td>Standard</td>
+                                    <td>2023-02-22</td>
+                                    <td><span class="status-active">Active</span></td>
+                                    <td>
+                                        <button class="btn-small">Edit</button>
+                                        <button class="btn-small btn-warning">Deactivate</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>M10047</td>
+                                    <td>Carol White</td>
+                                    <td>carol@example.com</td>
+                                    <td>Premium</td>
+                                    <td>2022-11-05</td>
+                                    <td><span class="status-inactive">Inactive</span></td>
+                                    <td>
+                                        <button class="btn-small">Edit</button>
+                                        <button class="btn-small btn-success">Activate</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-section" id="vehicles-section">
+                <div class="card">
+                    <h2>Manage Vehicles</h2>
+                    
+                    <div class="action-bar">
+                        <button class="btn-primary">Add New Vehicle</button>
+                        <div class="search-box">
+                            <input type="text" placeholder="Search vehicles...">
+                            <button class="btn-icon">🔍</button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Type</th>
+                                    <th>Model</th>
+                                    <th>Capacity</th>
+                                    <th>Status</th>
+                                    <th>Last Maintenance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>V001</td>
+                                    <td>Train</td>
+                                    <td>Express 2000</td>
+                                    <td>320 passengers</td>
+                                    <td><span class="status-active">Active</span></td>
+                                    <td>2023-05-15</td>
+                                    <td>
+                                        <button class="btn-small">Details</button>
+                                        <button class="btn-small btn-warning">Maintenance</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>V002</td>
+                                    <td>Train</td>
+                                    <td>City Commuter</td>
+                                    <td>180 passengers</td>
+                                    <td><span class="status-active">Active</span></td>
+                                    <td>2023-06-02</td>
+                                    <td>
+                                        <button class="btn-small">Details</button>
+                                        <button class="btn-small btn-warning">Maintenance</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>V003</td>
+                                    <td>Bus</td>
+                                    <td>Transit XL</td>
+                                    <td>45 passengers</td>
+                                    <td><span class="status-inactive">In Maintenance</span></td>
+                                    <td>2023-06-10</td>
+                                    <td>
+                                        <button class="btn-small">Details</button>
+                                        <button class="btn-small btn-success">Activate</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-section" id="backup-section">
+                <div class="card">
+                    <h2>System Backup</h2>
+                    
+                    <div class="backup-info">
+                        <h3>Backup Information</h3>
+                        <p>Last backup: <strong>June 10, 2023 08:15 AM</strong></p>
+                        <p>Backup size: <strong>128.4 MB</strong></p>
+                        <p>Backup location: <strong>/var/backups/bama/</strong></p>
+                    </div>
+                    
+                    <div class="backup-actions">
+                        <button class="btn-primary">Create New Backup</button>
+                        <button class="btn-warning">Restore from Backup</button>
+                    </div>
+                    
+                    <div class="backup-history">
+                        <h3>Backup History</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Size</th>
+                                    <th>Created By</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>June 10, 2023 08:15 AM</td>
+                                    <td>128.4 MB</td>
+                                    <td>System</td>
+                                    <td><span class="status-active">Complete</span></td>
+                                    <td>
+                                        <button class="btn-small">Download</button>
+                                        <button class="btn-small btn-warning">Delete</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>June 03, 2023 08:15 AM</td>
+                                    <td>127.8 MB</td>
+                                    <td>System</td>
+                                    <td><span class="status-active">Complete</span></td>
+                                    <td>
+                                        <button class="btn-small">Download</button>
+                                        <button class="btn-small btn-warning">Delete</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>May 27, 2023 08:15 AM</td>
+                                    <td>126.2 MB</td>
+                                    <td>System</td>
+                                    <td><span class="status-active">Complete</span></td>
+                                    <td>
+                                        <button class="btn-small">Download</button>
+                                        <button class="btn-small btn-warning">Delete</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div> 
