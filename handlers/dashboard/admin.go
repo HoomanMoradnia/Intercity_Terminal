@@ -75,9 +75,7 @@ func AdminUsersHandler(c echo.Context) error {
 	allUsers, err := db.GetAllUsers()
 	if err != nil {
 		log.Printf("Error getting all users: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Failed to retrieve users",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve users"})
 	}
 	defer allUsers.Close()
 
@@ -85,20 +83,63 @@ func AdminUsersHandler(c echo.Context) error {
 	var users []map[string]interface{}
 	for allUsers.Next() {
 		var id int64
-		var username, email, passwordHash, createdAt, dateOfBirth, socialSecurity, role string
-		
-		if err := allUsers.Scan(&id, &username, &email, &passwordHash, &createdAt, &dateOfBirth, &socialSecurity, &role); err != nil {
+		var usernameStr, email, passwordHash, createdAt, dateOfBirth, socialSecurity, role string
+		if err := allUsers.Scan(&id, &usernameStr, &email, &passwordHash, &createdAt, &dateOfBirth, &socialSecurity, &role); err != nil {
 			log.Printf("Error scanning user row: %v", err)
 			continue
 		}
-		
-		// Don't include password hash in the response
-		users = append(users, map[string]interface{}{
-			"id":         id,
-			"username":   username,
-			"email":      email,
+		users = append(users, map[string]interface{}{ 
+			"id": id,
+			"username": usernameStr,
+			"email": email,
 			"created_at": createdAt,
-			"role":       role,
+			"role": role,
+		})
+	}
+
+	return c.JSON(http.StatusOK, users)
+}
+
+// ManagerUsersHandler - Handler for manager user management
+func ManagerUsersHandler(c echo.Context) error {
+	// Make sure user is logged in and has manager role
+	usernameCookie, err := c.Cookie("username")
+	if err != nil || usernameCookie.Value == "" {
+		log.Printf("Manager users page access attempted without valid session")
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "You must be logged in to access this page"})
+	}
+	username := usernameCookie.Value
+
+	// Check role
+	roleCookie, err := c.Cookie("user_role")
+	if err != nil || (roleCookie.Value != "Manager" && roleCookie.Value != "Admin") {
+		log.Printf("Manager users page access attempted by non-manager user: %s", username)
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "You do not have permission to access the manager users page"})
+	}
+
+	// Fetch all users
+	allUsers, err := db.GetAllUsers()
+	if err != nil {
+		log.Printf("Error getting all users: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve users"})
+	}
+	defer allUsers.Close()
+
+	// Convert rows to array of maps
+	var users []map[string]interface{}
+	for allUsers.Next() {
+		var id int64
+		var usernameStr, email, passwordHash, createdAt, dateOfBirth, socialSecurity, role string
+		if err := allUsers.Scan(&id, &usernameStr, &email, &passwordHash, &createdAt, &dateOfBirth, &socialSecurity, &role); err != nil {
+			log.Printf("Error scanning user row: %v", err)
+			continue
+		}
+		users = append(users, map[string]interface{}{ 
+			"id": id,
+			"username": usernameStr,
+			"email": email,
+			"created_at": createdAt,
+			"role": role,
 		})
 	}
 
@@ -146,6 +187,14 @@ func AdminCreateUserHandler(c echo.Context) error {
 		})
 	}
 
+	// Validate username and password format
+	if ok, msg := utils.IsValidUsername(req.Username); !ok {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": msg})
+	}
+	if ok, msg := utils.IsValidPassword(req.Password); !ok {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": msg})
+	}
+
 	// Check valid role
 	if req.Role != "Operator" && req.Role != "Manager" && req.Role != "Accountant" && req.Role != "Admin" {
 		req.Role = "Operator" // Default to Operator if invalid role
@@ -178,6 +227,71 @@ func AdminCreateUserHandler(c echo.Context) error {
 	})
 }
 
+// ManagerCreateUserHandler - Handler for creating new users by manager (cannot assign Admin role)
+func ManagerCreateUserHandler(c echo.Context) error {
+	// Make sure user is logged in and has manager role
+	usernameCookie, err := c.Cookie("username")
+	if err != nil || usernameCookie.Value == "" {
+		log.Printf("Manager create user attempted without valid session")
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "You must be logged in to perform this action"})
+	}
+	// Check role
+	roleCookie, err := c.Cookie("user_role")
+	if err != nil || (roleCookie.Value != "Manager" && roleCookie.Value != "Admin") {
+		log.Printf("Manager create user attempted by non-manager user: %s", usernameCookie.Value)
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "You do not have permission to perform this action"})
+	}
+
+	// Parse JSON request
+	var req struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Role     string `json:"role"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request format"})
+	}
+
+	// Basic validation
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Username, email, and password are required"})
+	}
+
+	// Validate username and password format
+	if ok, msg := utils.IsValidUsername(req.Username); !ok {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": msg})
+	}
+	if ok, msg := utils.IsValidPassword(req.Password); !ok {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": msg})
+	}
+
+	// Restrict role: cannot assign Admin
+	switch req.Role {
+	case "Operator", "Manager", "Accountant":
+	// allowed
+	default:
+		req.Role = "Operator"
+	}
+
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Error hashing password: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create user"})
+	}
+
+	// Add user to database
+	userID, err := db.AddUser(req.Username, string(hashedPassword), "", "", req.Email, req.Role)
+	if err != nil {
+		log.Printf("Error creating user by manager: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create user"})
+	}
+
+	log.Printf("User created successfully by manager. ID: %d, Username: %s, Role: %s", userID, req.Username, req.Role)
+	return c.JSON(http.StatusOK, map[string]interface{}{"message": "User created successfully", "user_id": userID})
+}
+
 // AdminUpdateUserHandler - Handler for updating a user's role
 func AdminUpdateUserHandler(c echo.Context) error {
 	// Ensure request body contains id and role
@@ -197,6 +311,31 @@ func AdminUpdateUserHandler(c echo.Context) error {
 	// Update role in database
 	if err := db.UpdateUserRole(req.ID, req.Role); err != nil {
 		log.Printf("Error updating role for user %d: %v", req.ID, err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update user role"})
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": "Role updated successfully"})
+}
+
+// ManagerUpdateUserHandler - Handler for updating a user's role by manager (cannot assign Admin role)
+func ManagerUpdateUserHandler(c echo.Context) error {
+	// Ensure request body contains id and role
+	var req struct {
+		ID   int64  `json:"id"`
+		Role string `json:"role"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+	}
+	// Restrict role: cannot assign Admin
+	switch req.Role {
+	case "Operator", "Manager", "Accountant":
+	// allowed
+	default:
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid role"})
+	}
+	// Update role in database
+	if err := db.UpdateUserRole(req.ID, req.Role); err != nil {
+		log.Printf("Error updating role for user %d by manager: %v", req.ID, err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update user role"})
 	}
 	return c.JSON(http.StatusOK, map[string]string{"message": "Role updated successfully"})
@@ -232,6 +371,11 @@ func AdminUpdatePasswordHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Password must be at least 6 characters"})
 	}
 	
+	// Validate password format
+	if ok, msg := utils.IsValidPassword(req.Password); !ok {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": msg})
+	}
+	
 	// Hash the new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -265,6 +409,11 @@ func AdminUpdateUsernameHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Username must be at least 3 characters"})
 	}
 	
+	// Validate username format
+	if ok, msg := utils.IsValidUsername(req.Username); !ok {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": msg})
+	}
+	
 	// Update username in database
 	if err := db.UpdateUsername(req.ID, req.Username); err != nil {
 		log.Printf("Error updating username for user %d: %v", req.ID, err)
@@ -288,12 +437,12 @@ func AdminVehiclesHandler(c echo.Context) error {
 		})
 	}
 	
-	// Check role
+	// Check role: allow Admin and Manager
 	roleCookie, err := c.Cookie("user_role")
-	if err != nil || roleCookie.Value != "Admin" {
-		log.Printf("Admin vehicles page access attempted by non-admin user: %s", usernameCookie.Value)
+	if err != nil || (roleCookie.Value != "Admin" && roleCookie.Value != "Manager") {
+		log.Printf("Admin vehicles page access attempted by unauthorized user: %s", usernameCookie.Value)
 		return c.JSON(http.StatusForbidden, map[string]string{
-			"error": "You do not have permission to access the admin vehicles page",
+			"error": "You do not have permission to access the vehicles page",
 		})
 	}
 
@@ -354,10 +503,10 @@ func AdminCreateVehicleHandler(c echo.Context) error {
 		})
 	}
 	
-	// Check role
+	// Check role: allow Admin and Manager
 	roleCookie, err := c.Cookie("user_role")
-	if err != nil || roleCookie.Value != "Admin" {
-		log.Printf("Admin create vehicle attempted by non-admin user: %s", usernameCookie.Value)
+	if err != nil || (roleCookie.Value != "Admin" && roleCookie.Value != "Manager") {
+		log.Printf("Vehicle creation attempted by unauthorized user: %s", usernameCookie.Value)
 		return c.JSON(http.StatusForbidden, map[string]string{
 			"error": "You do not have permission to perform this action",
 		})
@@ -557,8 +706,9 @@ func AdminTripsHandler(c echo.Context) error {
 	if err != nil || usernameCookie.Value == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "You must be logged in"})
 	}
+	// Check role: allow Admin and Manager
 	roleCookie, err := c.Cookie("user_role")
-	if err != nil || roleCookie.Value != "Admin" {
+	if err != nil || (roleCookie.Value != "Admin" && roleCookie.Value != "Manager") {
 		return c.JSON(http.StatusForbidden, map[string]string{"error": "Permission denied"})
 	}
 
@@ -598,8 +748,9 @@ func AdminCreateTripHandler(c echo.Context) error {
 	if err != nil || usernameCookie.Value == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "You must be logged in"})
 	}
+	// Check role: allow Admin and Manager
 	roleCookie, err := c.Cookie("user_role")
-	if err != nil || roleCookie.Value != "Admin" {
+	if err != nil || (roleCookie.Value != "Admin" && roleCookie.Value != "Manager") {
 		return c.JSON(http.StatusForbidden, map[string]string{"error": "Permission denied"})
 	}
 
@@ -728,8 +879,9 @@ func AdminBookingsHandler(c echo.Context) error {
 	if err != nil || username.Value == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "You must be logged in"})
 	}
+	// Check role: allow Admin and Manager
 	r, err := c.Cookie("user_role")
-	if err != nil || r.Value != "Admin" {
+	if err != nil || (r.Value != "Admin" && r.Value != "Manager") {
 		return c.JSON(http.StatusForbidden, map[string]string{"error": "Permission denied"})
 	}
 
@@ -821,8 +973,9 @@ func AdminCreateBookingHandler(c echo.Context) error {
 	if err != nil || username.Value == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "You must be logged in"})
 	}
+	// Check role: allow Admin and Manager
 	r, err := c.Cookie("user_role")
-	if err != nil || r.Value != "Admin" {
+	if err != nil || (r.Value != "Admin" && r.Value != "Manager") {
 		return c.JSON(http.StatusForbidden, map[string]string{"error": "Permission denied"})
 	}
 
@@ -991,12 +1144,9 @@ func AdminTripCapacityHandler(c echo.Context) error {
 
 // AdminReportsDataHandler - Handler for getting reports data
 func AdminReportsDataHandler(c echo.Context) error {
-	// Ensure admin
+	// Ensure user is logged in; group middleware enforces role
 	if cookie, err := c.Cookie("username"); err != nil || cookie.Value == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "You must be logged in"})
-	}
-	if role, err := c.Cookie("user_role"); err != nil || role.Value != "Admin" {
-		return c.JSON(http.StatusForbidden, map[string]string{"error": "Permission denied"})
 	}
 	// Parse query params
 	reportType := c.QueryParam("report")
@@ -1028,12 +1178,9 @@ func AdminReportsDataHandler(c echo.Context) error {
 
 // AdminReportsExportHandler - Handler for exporting reports to XLSX
 func AdminReportsExportHandler(c echo.Context) error {
-	// Ensure admin
+	// Ensure user is logged in; group middleware enforces role
 	if cookie, err := c.Cookie("username"); err != nil || cookie.Value == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "You must be logged in"})
-	}
-	if role, err := c.Cookie("user_role"); err != nil || role.Value != "Admin" {
-		return c.JSON(http.StatusForbidden, map[string]string{"error": "Permission denied"})
 	}
 	// Parse params
 	reportType := c.QueryParam("report")
@@ -1093,7 +1240,8 @@ func AdminBackupHandler(c echo.Context) error {
 	if cookie, err := c.Cookie("username"); err != nil || cookie.Value == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "You must be logged in"})
 	}
-	if role, err := c.Cookie("user_role"); err != nil || role.Value != "Admin" {
+	// Check role: allow Admin and Manager
+	if role, err := c.Cookie("user_role"); err != nil || (role.Value != "Admin" && role.Value != "Manager") {
 		return c.JSON(http.StatusForbidden, map[string]string{"error": "Permission denied"})
 	}
 	// Perform backup

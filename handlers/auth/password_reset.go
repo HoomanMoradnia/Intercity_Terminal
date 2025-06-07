@@ -489,8 +489,8 @@ func SetupSecurityQuestionHandler(c echo.Context) error {
 	}
 
 	var userID int64
-	var username, dob, ssn, password, email string
-	err = userRow.Scan(&userID, &username, &dob, &ssn, &password, &email)
+	var username, dob, ssn, password, email, userRole string
+	err = userRow.Scan(&userID, &username, &dob, &ssn, &password, &email, &userRole)
 	if err != nil {
 		log.Printf("Error scanning user data: %v", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, "Error retrieving user information")
