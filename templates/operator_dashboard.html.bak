@@ -97,8 +97,8 @@
                     color: #555;
                 }
                 </style>
-                        </div>
-                        
+            </div>
+
             <div class="content-section" id="bookings-section">
                 <div class="card">
                     <h2>Manage Bookings</h2>
@@ -3288,7 +3288,7 @@
             if (link) {
                 link.click();
             }
-                    } else {
+        } else {
             // Default to overview section if no hash is present
             // No need to load any data for overview
         }
@@ -3381,4 +3381,5 @@
         });
     });
 </script>
-{{end}} 
+</body>
+</html>

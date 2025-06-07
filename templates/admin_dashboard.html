@@ -27,7 +27,7 @@
                 <li><a href="#trips">Manage Trips</a></li>
                 <li><a href="#reports">Reports</a></li>
                 <li><a href="#backup">System Backup</a></li>
-                <li><a href="#settings">System Settings</a></li>
+                <li><a href="#settings">Account Settings</a></li>
             </ul>
         </div>
 
@@ -41,40 +41,86 @@
             {{end}}
 
             <div class="content-section active" id="overview-section">
-                <div class="card">
-                    <h2>System Overview</h2>
-                    
-                    <div class="stats-container">
-                        <div class="stat-card">
-                            <div class="stat-icon">👥</div>
-                            <div class="stat-value">1,245</div>
-                            <div class="stat-label">Total Users</div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-icon">🎫</div>
-                            <div class="stat-value">8,532</div>
-                            <div class="stat-label">Tickets Sold</div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-icon">💰</div>
-                            <div class="stat-value">$125,430</div>
-                            <div class="stat-label">Total Revenue</div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-icon">🚂</div>
-                            <div class="stat-value">48</div>
-                            <div class="stat-label">Active Vehicles</div>
+                <div class="card" style="background: linear-gradient(135deg, #f7fafc 60%, #e3f0ff 100%); box-shadow: 0 4px 24px rgba(52,152,219,0.08);">
+                    <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem;">
+                        <img src="/static/images/backup/rocket.svg" alt="Welcome" style="width: 64px; height: 64px;">
+                        <div>
+                            <h2 style="margin: 0; font-size: 2rem; color: #2980b9;">Welcome, {{.Username}}!</h2>
+                            <p style="margin: 0.5rem 0 0 0; color: #555; font-size: 1.1rem;">This is your admin control center. Quickly access any management area below.</p>
                         </div>
                     </div>
-                    
-                    <div class="alert alert-info">
-                        <h3><i class="icon">ℹ️</i> Welcome to the Admin Dashboard</h3>
-                        <p>As an administrator, you have full access to all system features. Use the sidebar to navigate between different management sections.</p>
+                    <div class="overview-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                        <a href="#bookings" class="overview-feature">
+                            <div class="feature-icon">🎫</div>
+                            <div class="feature-title">Bookings</div>
+                            <div class="feature-desc">View and manage all ticket bookings.</div>
+                        </a>
+                        <a href="#members" class="overview-feature">
+                            <div class="feature-icon">👤</div>
+                            <div class="feature-title">Members</div>
+                            <div class="feature-desc">Manage user accounts and permissions.</div>
+                        </a>
+                        <a href="#vehicles" class="overview-feature">
+                            <div class="feature-icon">🚍</div>
+                            <div class="feature-title">Vehicles</div>
+                            <div class="feature-desc">Add, edit, or remove vehicles.</div>
+                        </a>
+                        <a href="#trips" class="overview-feature">
+                            <div class="feature-icon">🗺️</div>
+                            <div class="feature-title">Trips</div>
+                            <div class="feature-desc">Plan and manage all trips.</div>
+                        </a>
+                        <a href="#reports" class="overview-feature">
+                            <div class="feature-icon">📊</div>
+                            <div class="feature-title">Reports</div>
+                            <div class="feature-desc">Generate and export system reports.</div>
+                        </a>
+                        <a href="#backup" class="overview-feature">
+                            <div class="feature-icon">💾</div>
+                            <div class="feature-title">Backup</div>
+                            <div class="feature-desc">Backup and restore your data.</div>
+                        </a>
+                        <a href="#settings" class="overview-feature">
+                            <div class="feature-icon">⚙️</div>
+                            <div class="feature-title">Account Settings</div>
+                            <div class="feature-desc">Manage your account details, security question, and password.</div>
+                        </a>
                     </div>
                 </div>
+                <style>
+                .overview-feature {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    background: #fff;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 8px rgba(52,152,219,0.07);
+                    padding: 1.25rem 1.5rem;
+                    text-decoration: none;
+                    color: #222;
+                    transition: box-shadow 0.2s, transform 0.2s;
+                    border: 1px solid #f0f4fa;
+                }
+                .overview-feature:hover {
+                    box-shadow: 0 6px 24px rgba(52,152,219,0.13);
+                    transform: translateY(-2px) scale(1.03);
+                    border-color: #b2d6f8;
+                }
+                .feature-icon {
+                    font-size: 2.2rem;
+                    margin-bottom: 0.5rem;
+                }
+                .feature-title {
+                    font-weight: 600;
+                    font-size: 1.15rem;
+                    margin-bottom: 0.25rem;
+                    color: #2980b9;
+                }
+                .feature-desc {
+                    font-size: 0.97rem;
+                    color: #555;
+                }
+                </style>
             </div>
 
             <div class="content-section" id="bookings-section">
@@ -300,12 +346,13 @@
                             <h3>Add New Member</h3>
                             <form id="add-member-form">
                                 <div class="form-group">
-                                    <label for="member-name">Full Name</label>
-                                    <input type="text" id="member-name" name="name" required>
+                                    <label for="member-name">Username</label>
+                                    <input type="text" id="member-name" name="name" required maxlength="30">
+                                    <div id="addUsernameError" class="form-error-message" style="display: none; color: red; font-size: 0.8em; margin-top: 4px;"></div>
                                 </div>
                                 <div class="form-group">
                                     <label for="member-email">Email</label>
-                                    <input type="email" id="member-email" name="email" required>
+                                    <input type="email" id="member-email" name="email" required maxlength="254">
                                 </div>
                                 <div class="form-group">
                                     <label for="member-role">Role</label>
@@ -318,7 +365,19 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="member-password">Initial Password</label>
-                                    <input type="password" id="member-password" name="password" required>
+                                    <div class="password-wrapper">
+                                        <input type="password" id="member-password" name="password" required maxlength="30">
+                                        <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                    </div>
+                                    <ul class="passwordCriteria" style="display: none; list-style: none; padding-left: 0; margin-top: 4px;">
+                                        <li class="passwordLength" style="color: red;">★ At least 8 characters</li>
+                                        <li class="passwordUpper" style="color: red;">★ At least one uppercase letter</li>
+                                        <li class="passwordLower" style="color: red;">★ At least one lowercase letter</li>
+                                        <li class="passwordNumber" style="color: red;">★ At least one number</li>
+                                        <li class="passwordSymbol" style="color: red;">★ At least one special character</li>
+                                    </ul>
                                 </div>
                                 <div class="form-actions">
                                     <button type="button" class="btn-secondary cancel-btn">Cancel</button>
@@ -337,11 +396,12 @@
                                 <input type="hidden" id="edit-member-id">
                                 <div class="form-group">
                                     <label for="edit-member-name">Full Name</label>
-                                    <input type="text" id="edit-member-name" name="name" required>
+                                    <input type="text" id="edit-member-name" name="name" required maxlength="30">
+                                    <div id="editUsernameError" class="form-error-message" style="display: none; color: red; font-size: 0.8em; margin-top: 4px;"></div>
                                 </div>
                                 <div class="form-group">
                                     <label for="edit-member-email">Email</label>
-                                    <input type="email" id="edit-member-email" name="email" required>
+                                    <input type="email" id="edit-member-email" name="email" required maxlength="254">
                                 </div>
                                 <div class="form-group">
                                     <label for="edit-member-role">Role</label>
@@ -354,7 +414,19 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="edit-member-password">New Password (leave blank to keep current)</label>
-                                    <input type="password" id="edit-member-password" name="password">
+                                    <div class="password-wrapper">
+                                        <input type="password" id="edit-member-password" name="password">
+                                        <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                    </div>
+                                    <ul class="passwordCriteria" style="display: none; list-style: none; padding-left: 0; margin-top: 4px;">
+                                        <li class="passwordLength" style="color: red;">★ At least 8 characters</li>
+                                        <li class="passwordUpper" style="color: red;">★ At least one uppercase letter</li>
+                                        <li class="passwordLower" style="color: red;">★ At least one lowercase letter</li>
+                                        <li class="passwordNumber" style="color: red;">★ At least one number</li>
+                                        <li class="passwordSymbol" style="color: red;">★ At least one special character</li>
+                                    </ul>
                                 </div>
                                 <div class="form-actions">
                                     <button type="button" class="btn-secondary cancel-btn">Cancel</button>
@@ -405,11 +477,28 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="new-password">New Password</label>
-                                    <input type="password" id="new-password" name="password" required>
+                                    <div class="password-wrapper">
+                                        <input type="password" id="new-password" name="password" required maxlength="30">
+                                        <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                    </div>
+                                    <ul class="passwordCriteria" style="display: none; list-style: none; padding-left: 0; margin-top: 4px;">
+                                        <li class="passwordLength" style="color: red;">★ At least 8 characters</li>
+                                        <li class="passwordUpper" style="color: red;">★ At least one uppercase letter</li>
+                                        <li class="passwordLower" style="color: red;">★ At least one lowercase letter</li>
+                                        <li class="passwordNumber" style="color: red;">★ At least one number</li>
+                                        <li class="passwordSymbol" style="color: red;">★ At least one special character</li>
+                                    </ul>
                                 </div>
                                 <div class="form-group">
                                     <label for="confirm-password">Confirm Password</label>
-                                    <input type="password" id="confirm-password" name="confirm-password" required>
+                                    <div class="password-wrapper">
+                                        <input type="password" id="confirm-password" name="confirm-password" required maxlength="30">
+                                        <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="form-actions">
                                     <button type="button" class="btn-secondary cancel-btn">Cancel</button>
@@ -432,7 +521,8 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="new-username">New Username</label>
-                                    <input type="text" id="new-username" name="username" required>
+                                    <input type="text" id="new-username" name="username" required maxlength="30">
+                                    <div id="changeUsernameError" class="form-error-message" style="display: none; color: red; font-size: 0.8em; margin-top: 4px;"></div>
                                 </div>
                                 <div class="form-actions">
                                     <button type="button" class="btn-secondary cancel-btn">Cancel</button>
@@ -887,9 +977,12 @@
             
             <div class="content-section" id="settings-section">
                 <div class="card">
-                    <h2>System Settings</h2>
-                    <p>Configure global system settings and parameters.</p>
-                    <!-- Content similar to other sections -->
+                    <h2>Account Settings</h2>
+                    <p>Manage your account details, security question, and password.</p>
+                    <div class="action-bar" style="display:flex; gap:1rem; margin-top:1rem;">
+                        <a href="/setup-security" class="btn-primary">Manage Security Question</a>
+                        <a href="/security-reset" class="btn-secondary">Reset Password</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1689,6 +1782,15 @@
             <button class="confirm-dialog-confirm" id="confirm-dialog-confirm">Confirm</button>
         </div>
     </div>
+</div>
+
+// Booking Details Modal
+<div id="booking-details-modal" style="display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background:rgba(0,0,0,0.5);">
+  <div style="background:#fff;margin:5% auto;padding:1.5rem;border-radius:8px;max-width:500px;position:relative;">
+    <span id="booking-details-close" style="position:absolute;top:10px;right:15px;font-size:1.5rem;cursor:pointer;">&times;</span>
+    <h3>Booking Details</h3>
+    <div id="booking-details-body"></div>
+  </div>
 </div>
 
 <script>
@@ -3295,9 +3397,6 @@
                                 <th>Passenger</th>
                                 <th>Origin</th>
                                 <th>Destination</th>
-                                <th>Social ID</th>
-                                <th>Phone</th>
-                                <th>DOB</th>
                                 <th>Booking Date</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -3309,16 +3408,25 @@
                 bookings.forEach(b => {
                     html += `
                         <tr>
-                                <td>${b.id}</td>
-                                <td>${b.passenger}</td>
+                            <td>${b.id}</td>
+                            <td>${b.passenger}</td>
                             <td>${b.origin}</td>
                             <td>${b.destination}</td>
-                            <td>${b.social_id || 'N/A'}</td>
-                            <td>${b.phone_number || 'N/A'}</td>
-                            <td>${b.date_of_birth || 'N/A'}</td>
-                                <td>${b.booking_date}</td>
+                            <td>${b.booking_date}</td>
                             <td>${b.status}</td>
-                                <td>
+                            <td>
+                                <button class="btn-small btn-info view-booking-btn"
+                                        data-id="${b.id}"
+                                        data-passenger="${b.passenger}"
+                                        data-origin="${b.origin}"
+                                        data-destination="${b.destination}"
+                                        data-social-id="${b.social_id || ''}"
+                                        data-phone="${b.phone_number || ''}"
+                                        data-dob="${b.date_of_birth || ''}"
+                                        data-booking-date="${b.booking_date}"
+                                        data-status="${b.status}">
+                                    Details
+                                </button>
                                 <button class="btn-small edit-booking"
                                         data-id="${b.id}"
                                         data-trip-id="${b.trip_id}"
@@ -3330,7 +3438,7 @@
                                     Edit
                                 </button>
                                 <button class="btn-small btn-warning delete-booking" data-id="${b.id}">Delete</button>
-                                </td>
+                            </td>
                         </tr>
                     `;
                 });
@@ -3342,7 +3450,35 @@
                 
                 table.innerHTML = html;
                 
-                // Add event listeners to the edit and delete buttons
+                // Attach Details button listeners
+                document.querySelectorAll('.view-booking-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const modal = document.getElementById('booking-details-modal');
+                        const body = document.getElementById('booking-details-body');
+                        body.innerHTML = `
+                            <p><strong>ID:</strong> ${btn.dataset.id}</p>
+                            <p><strong>Passenger:</strong> ${btn.dataset.passenger}</p>
+                            <p><strong>Origin:</strong> ${btn.dataset.origin}</p>
+                            <p><strong>Destination:</strong> ${btn.dataset.destination}</p>
+                            <p><strong>Social ID:</strong> ${btn.dataset.socialId || 'N/A'}</p>
+                            <p><strong>Phone:</strong> ${btn.dataset.phone || 'N/A'}</p>
+                            <p><strong>DOB:</strong> ${btn.dataset.dob || 'N/A'}</p>
+                            <p><strong>Booking Date:</strong> ${btn.dataset.bookingDate}</p>
+                            <p><strong>Status:</strong> ${btn.dataset.status}</p>
+                        `;
+                        modal.style.display = 'block';
+                    });
+                });
+                
+                // Close details modal
+                document.getElementById('booking-details-close').addEventListener('click', () => {
+                    document.getElementById('booking-details-modal').style.display = 'none';
+                });
+                window.addEventListener('click', function(event) {
+                    const modal = document.getElementById('booking-details-modal');
+                    if (event.target === modal) modal.style.display = 'none';
+                });
+                
                 document.querySelectorAll('.edit-booking').forEach(btn => {
                     btn.addEventListener('click', async function() {
                         const id = this.getAttribute('data-id');
@@ -3645,6 +3781,16 @@
                 }
             });
         }
+
+        // On initial load, simulate click on the correct tab from URL hash to trigger its data loader
+        if (window.location.hash) {
+            const sectionName = window.location.hash.substring(1);
+            const hashLink = document.querySelector(`.sidebar-menu a[href="#${sectionName}"]`) ||
+                             document.querySelector(`.overview-feature[href="#${sectionName}"]`);
+            if (hashLink) {
+                hashLink.click();
+            }
+        }
     });
 
     // Function to show a custom confirmation dialog instead of the browser's confirm()
@@ -3692,5 +3838,124 @@
             }
         });
     }
+
+    function navigateToSection(sectionName) {
+        // Remove active class from all sidebar links and content sections
+        document.querySelectorAll('.sidebar-menu li').forEach(l => l.classList.remove('active'));
+        document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+
+        // Add active class to the target sidebar link and content section
+        const targetSidebarLink = document.querySelector(`.sidebar-menu a[href="#${sectionName}"]`);
+        if (targetSidebarLink) {
+            targetSidebarLink.parentElement.classList.add('active');
+        }
+
+        const targetContentSection = document.getElementById(`${sectionName}-section`);
+        if (targetContentSection) {
+            targetContentSection.classList.add('active');
+        }
+    }
+
+    // Attach listeners to all navigation links (sidebar and overview cards)
+    document.querySelectorAll('.sidebar-menu a, .overview-feature').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const sectionName = this.getAttribute('href').substring(1);
+            navigateToSection(sectionName);
+            history.pushState(null, '', '#' + sectionName);
+        });
+    });
+
+    // Custom validation functions
+    function validateUsername(usernameInput, errorDiv) {
+        const username = usernameInput.value;
+        const baseRegex = /^[0-9A-Za-z_-]{3,30}$/;
+        let isValid = true;
+        let errorMessage = '';
+
+        if (!baseRegex.test(username)) {
+            isValid = false;
+            errorMessage = 'Username must be 3-30 characters long and contain only letters, numbers, underscores (_), or hyphens (-).';
+        } else if (/^[0-9]/.test(username)) {
+            isValid = false;
+            errorMessage = 'Username cannot start with a number.';
+        } else if (username.startsWith('_') || username.startsWith('-')) {
+            isValid = false;
+            errorMessage = 'Username cannot start with an underscore (_) or hyphen (-).';
+        } else if (username.endsWith('_') || username.endsWith('-')) {
+            isValid = false;
+            errorMessage = 'Username cannot end with an underscore (_) or hyphen (-).';
+        } else if (username.includes('__') || username.includes('--') || username.includes('-_') || username.includes('_-')) {
+            isValid = false;
+            errorMessage = 'Username cannot contain consecutive underscores (_) or hyphens (-).';
+        }
+
+        if (!isValid) {
+            usernameInput.style.borderColor = 'red';
+            errorDiv.textContent = errorMessage;
+            errorDiv.style.display = 'block';
+        } else {
+            usernameInput.style.borderColor = '';
+            errorDiv.style.display = 'none';
+        }
+        return isValid;
+    }
+
+    function validatePassword(passwordInput) {
+        const criteriaList = passwordInput.parentElement.nextElementSibling; // Adjusted selector
+        const pwd = passwordInput.value;
+        const lengthCrit = criteriaList.querySelector('.passwordLength');
+        const upperCrit = criteriaList.querySelector('.passwordUpper');
+        const lowerCrit = criteriaList.querySelector('.passwordLower');
+        const numberCrit = criteriaList.querySelector('.passwordNumber');
+        const symbolCrit = criteriaList.querySelector('.passwordSymbol');
+        let isValid = true;
+        if (pwd.length >= 8) { lengthCrit.style.color = 'green'; } else { lengthCrit.style.color = 'red'; isValid = false; }
+        if (/[A-Z]/.test(pwd)) { upperCrit.style.color = 'green'; } else { upperCrit.style.color = 'red'; isValid = false; }
+        if (/[a-z]/.test(pwd)) { lowerCrit.style.color = 'green'; } else { lowerCrit.style.color = 'red'; isValid = false; }
+        if (/[0-9]/.test(pwd)) { numberCrit.style.color = 'green'; } else { numberCrit.style.color = 'red'; isValid = false; }
+        if (/[^A-Za-z0-9]/.test(pwd)) { symbolCrit.style.color = 'green'; } else { symbolCrit.style.color = 'red'; isValid = false; }
+        return isValid;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add validation listeners for "Add Member"
+        const addMemberUsernameInput = document.getElementById('member-name');
+        const addMemberPasswordInput = document.getElementById('member-password');
+        if(addMemberUsernameInput) {
+            addMemberUsernameInput.addEventListener('input', () => validateUsername(addMemberUsernameInput, document.getElementById('addUsernameError')));
+        }
+        if(addMemberPasswordInput) {
+            addMemberPasswordInput.addEventListener('input', () => validatePassword(addMemberPasswordInput));
+            addMemberPasswordInput.addEventListener('focus', () => addMemberPasswordInput.parentElement.nextElementSibling.style.display = 'block');
+            addMemberPasswordInput.addEventListener('blur', () => addMemberPasswordInput.parentElement.nextElementSibling.style.display = 'none');
+        }
+
+        // Add validation listeners for "Change Username"
+        const changeUsernameInput = document.getElementById('new-username');
+        if(changeUsernameInput) {
+            changeUsernameInput.addEventListener('input', () => validateUsername(changeUsernameInput, document.getElementById('changeUsernameError')));
+        }
+
+        // Add validation listeners for "Change Password"
+        const changePasswordInput = document.getElementById('new-password');
+        if(changePasswordInput) {
+            changePasswordInput.addEventListener('input', () => validatePassword(changePasswordInput));
+            changePasswordInput.addEventListener('focus', () => changePasswordInput.parentElement.nextElementSibling.style.display = 'block');
+            changePasswordInput.addEventListener('blur', () => changePasswordInput.parentElement.nextElementSibling.style.display = 'none');
+        }
+
+        // Setup password toggles
+        document.querySelectorAll('.password-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const passwordInput = this.previousElementSibling;
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                } else {
+                    passwordInput.type = 'password';
+                }
+            });
+        });
+    });
 </script>
 {{end}} 

@@ -1,0 +1,34 @@
+{{define "content"}}
+<div class="dashboard-container">
+    <h2>Trip Plan: Next 7 Days</h2>
+    <button class="btn-primary" onclick="window.location.href='/dashboard';" style="margin-bottom:1rem;">Back to Dashboard</button>
+    {{if .Error}}<div class="alert alert-error">{{.Error}}</div>{{end}}
+    {{if .Success}}<div class="alert alert-success">{{.Success}}</div>{{end}}
+    <div class="table-responsive" style="background-color: rgba(255,255,255,0.9); padding: 1rem; border-radius: 8px;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Origin</th>
+                    <th>Destination</th>
+                    <th>Departure</th>
+                    <th>Arrival</th>
+                    <th>Vehicle</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Trips}}
+                <tr>
+                    <td>{{.origin}}</td>
+                    <td>{{.destination}}</td>
+                    <td>{{.departure_time}}</td>
+                    <td>{{.arrival_time}}</td>
+                    <td>{{.vehicle_number}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="5" style="text-align:center;">No trips scheduled for the next week.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}} 
