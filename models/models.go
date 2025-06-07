@@ -8,6 +8,7 @@ type PageData struct {
 	ActivePage       string
 	Users            []map[string]interface{}
 	LoginLogs        []map[string]interface{}
+	Trips            []map[string]interface{}
 	IsLoggedIn       bool
 	Username         string
 	UserRole         string
@@ -34,4 +35,16 @@ type RegistrationForm struct {
 	SSN              string `form:"ssn"`
 	SecurityQuestion string `form:"security_question"`
 	SecurityAnswer   string `form:"security_answer"`
+}
+
+// Booking struct
+type Booking struct {
+	ID          int64  `json:"id"`
+	TripID      int64  `json:"trip_id"`
+	Passenger   string `json:"passenger"`
+	SocialID    string `json:"social_id"`
+	PhoneNumber string `json:"phone_number"`
+	DateOfBirth string `json:"date_of_birth"`
+	BookingDate string `json:"booking_date"`
+	Status      string `json:"status"`
 } 
